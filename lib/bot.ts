@@ -248,14 +248,27 @@ async function stepMachine(a: StepArgs) {
       if (slots.district && !ctx.district) ctx.district = slots.district;
       if (slots.address && !ctx.address && slots.address.length >= 5) ctx.address = slots.address;
 
-      const normalized = latinToCyrillic(t);
-      const query = slots.productCode ?? extractProductCode(t) ?? normalized;
-      if (!query || query.trim().length < 2) {
+      const addressNoiseRe = /\b(\d+\s*р?\s*хороо|\d+\s*тоот|\d+\s*байр|\d+\s*орц|\d+\s*давхар|хороо|тоот|байр|орц|давхар)\b/gi;
+      const searchCandidate = slots.remainingText.replace(addressNoiseRe, '').replace(/\s+/g, ' ').trim();
+      const hasProductHint = !!slots.productCode || (searchCandidate.length >= 2 && /[а-яөүёa-z]/i.test(searchCandidate));
+      const hasOtherSlots = !!(slots.phone || slots.province || slots.district || slots.address);
+
+      if (!hasProductHint) {
+        const savedParts: string[] = [];
+        if (slots.phone) savedParts.push(`Утас: ${slots.phone}`);
+        if (slots.province) savedParts.push(`Аймаг: ${slots.province}`);
+        if (slots.district) savedParts.push(`Дүүрэг: ${slots.district}`);
+        if (slots.address) savedParts.push(`Хаяг: ${slots.address}`);
+        const prefix = hasOtherSlots && savedParts.length
+          ? `Хадгалсан:\n${savedParts.join('\n')}\n\n`
+          : '';
         await botSay(token, psid, convId,
-          'Сайн байна уу! Би захиалга авах бот байна. Ямар бүтээгдэхүүн авахыг хүсч байна вэ? Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.');
+          `${prefix}Ямар бараа авахыг хүсч байна вэ? Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.`);
         await updateState(convId, 'PRODUCT', ctx, cart);
         return;
       }
+
+      const query = slots.productCode ?? searchCandidate;
       const products = await erpSearchProducts(erpConfig, query, 5);
       if (!products.length) {
         await botSay(token, psid, convId, 'Уучлаарай, бүтээгдэхүүн олдсонгүй. Дахин оролдоно уу.');
@@ -502,10 +515,18 @@ export async function handlePostback(pageId: string, psid: string, payload: stri
     );
     if (!product) return;
     const ctx = (conv.context as Ctx) || {};
+    const cart = (conv.cart as unknown as CartItem[]) || [];
     ctx.selectedProduct = product;
     await sendText(page.accessToken, psid,
-      `${product.name}\nҮнэ: ${product.price.toLocaleString()}₮\nХэдэн ширхэг авах вэ?`,
+      `${product.name} сонгогдлоо.\nҮнэ: ${product.price.toLocaleString()}₮\nХэдэн ширхэг авах вэ?`,
       ['1', '2', '3', 'Өөр тоо']);
-    await updateState(conv.id, 'QUANTITY', ctx);
+    await prisma.message.create({
+      data: {
+        conversationId: conv.id,
+        text: `${product.name} сонгогдлоо. Хэдэн ширхэг авах вэ?`,
+        isFromBot: true,
+      },
+    });
+    await updateState(conv.id, 'QUANTITY', ctx, cart);
   }
 }

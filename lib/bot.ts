@@ -572,8 +572,9 @@ async function stepMachine(a: StepArgs) {
     }
     case 'ADDRESS': {
       if (!ctx.address) {
-        if (t.length < 5) {
-          await botSay(token, psid, convId, 'Хаягаа дэлгэрэнгүй бичнэ үү (5-с илүү тэмдэгт).');
+        const wordCount = t.split(/\s+/).filter(Boolean).length;
+        if (t.length < 10 || wordCount < 2) {
+          await botSay(token, psid, convId, 'Хаягаа дэлгэрэнгүй бичнэ үү (хороо, байр, тоот, орц, давхар).');
           return;
         }
         ctx.address = t;

@@ -136,6 +136,10 @@ export async function erpCreateOrder(
 
     const orderNumber = generateOrderNumber();
     const shopSource = input.shopSource || 'Facebook chatbot';
+    const customerName = (input.customerName && input.customerName.trim()) || input.customerPhone;
+    const addressSafe = (input.address && input.address.trim()) || '-';
+    const provinceSafe = (input.province && input.province.trim()) || 'Улаанбаатар';
+    const opp = 'chatbot';
 
     console.log('[erpCreateOrder] Inserting order', {
       orderNumber,
@@ -164,14 +168,14 @@ export async function erpCreateOrder(
         "orderTotal"
       ) VALUES (
         ${orderNumber},
-        ${input.customerName ?? null},
+        ${customerName},
         ${input.customerPhone},
         ${input.extraPhone ?? null},
-        ${input.address},
+        ${addressSafe},
         ${input.district ?? null},
-        ${input.province},
+        ${provinceSafe},
         ${input.operatorNote ?? null},
-        ${'chatbot'},
+        ${opp},
         ${shopSource},
         ${'NEW'}::"OrderStatus",
         ${JSON.stringify(productsJson)}::jsonb,

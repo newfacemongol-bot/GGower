@@ -102,7 +102,12 @@ export function extractSlots(text: string, opts: { productSelected: boolean; wan
     remaining = remaining.replace(new RegExp('\\b' + parseInt(plain, 10) + '\\b', 'g'), ' ');
   }
   remaining = remaining.replace(/\s+/g, ' ').trim();
-  if (remaining.length >= 5 && /[а-яөүёa-z]/i.test(remaining)) {
+  const hasAddressMarkers = /(хороо|тоот|байр|орц|давхар|гудамж|хотхон|хашаа|street|apt|building)/i.test(remaining);
+  const wordCount = remaining.split(/\s+/).filter(Boolean).length;
+  if (
+    /[а-яөүёa-z]/i.test(remaining) &&
+    (hasAddressMarkers || (remaining.length >= 10 && wordCount >= 2))
+  ) {
     result.address = remaining;
   }
   result.remainingText = remaining;

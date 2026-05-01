@@ -103,8 +103,22 @@ export async function erpCreateOrder(
   input: ErpOrderInput,
 ): Promise<{ id?: string; orderNumber?: string; status?: string; error?: string }> {
   try {
+    if (!input.customerPhone || !input.address || !input.province) {
+      console.error('[erpCreateOrder] Missing required fields', {
+        customerPhone: !!input.customerPhone,
+        address: !!input.address,
+        province: !!input.province,
+      });
+      return { error: 'MISSING_REQUIRED_FIELDS' };
+    }
+    if (!input.products || input.products.length === 0) {
+      console.error('[erpCreateOrder] No products provided');
+      return { error: 'NO_PRODUCTS' };
+    }
+
     const dup = await erpCheckDuplicateOrder(input.customerPhone);
     if (dup) {
+      console.warn('[erpCreateOrder] Duplicate active order for phone', input.customerPhone);
       return { error: 'DUPLICATE_ACTIVE_ORDER' };
     }
 
@@ -115,12 +129,21 @@ export async function erpCreateOrder(
       price: p.price,
       quantity: p.quantity,
     }));
-    const orderTotal = input.products.reduce((sum, p) => sum + p.price * p.quantity, 0);
+    const orderTotal = input.products.reduce((sum, p) => sum + Math.round(p.price * p.quantity), 0);
     const historyJson = [
       { status: 'NEW', date: new Date().toISOString(), note: 'Chatbot захиалга' },
     ];
 
     const orderNumber = generateOrderNumber();
+    const shopSource = input.shopSource || 'Facebook chatbot';
+
+    console.log('[erpCreateOrder] Inserting order', {
+      orderNumber,
+      customerPhone: input.customerPhone,
+      province: input.province,
+      productsCount: productsJson.length,
+      orderTotal,
+    });
 
     const rows = await erpDb.$queryRaw<{ id: number; orderNumber: string; status: string }[]>`
       INSERT INTO "Order" (
@@ -149,7 +172,7 @@ export async function erpCreateOrder(
         ${input.province},
         ${input.operatorNote ?? null},
         ${'chatbot'},
-        ${input.shopSource},
+        ${shopSource},
         ${'NEW'}::"OrderStatus",
         ${JSON.stringify(productsJson)}::jsonb,
         ${JSON.stringify(historyJson)}::jsonb,
@@ -160,14 +183,28 @@ export async function erpCreateOrder(
     `;
 
     const created = rows[0];
-    if (!created) return { error: 'INSERT_FAILED' };
+    if (!created) {
+      console.error('[erpCreateOrder] INSERT returned no rows');
+      return { error: 'INSERT_FAILED' };
+    }
+    console.log('[erpCreateOrder] Order created', {
+      id: created.id,
+      orderNumber: created.orderNumber,
+    });
     return {
       id: String(created.id),
       orderNumber: created.orderNumber,
       status: created.status,
     };
   } catch (e) {
-    return { error: (e as Error).message };
+    const err = e as Error & { code?: string; meta?: unknown };
+    console.error('[erpCreateOrder] Failed', {
+      message: err.message,
+      code: err.code,
+      meta: err.meta,
+      stack: err.stack,
+    });
+    return { error: err.message };
   }
 }
 

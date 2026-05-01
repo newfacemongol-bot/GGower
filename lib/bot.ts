@@ -4,6 +4,7 @@ import { erpSearchProducts, erpGetProduct, erpCreateOrder, erpSearchOrders, type
 import { extractProductCode, extractPhone, isOrderIntent, isBareOrderIntent } from './product-code';
 import { latinToCyrillic } from './translit';
 import { PROVINCES, UB_DISTRICTS, isUB, normalizeProvince, normalizeDistrict } from './provinces';
+import { extractSlots } from './slot-extract';
 import { getDeliveryMessage, isBotEnabled, isNightMode } from './settings';
 
 type State =
@@ -22,6 +23,7 @@ interface Ctx {
   note?: string;
   lastMessageTimes?: number[];
   rateLimitedUntil?: number;
+  extraPhoneAsked?: boolean;
 }
 
 interface CartItem { product: ErpProduct; quantity: number; }
@@ -115,7 +117,65 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
     return;
   }
 
+  if (state !== 'IDLE' && state !== 'PRODUCT' && state !== 'CONFIRM' && state !== 'DONE') {
+    const slots = extractSlots(text, {
+      productSelected: !!ctx.selectedProduct || cart.length > 0,
+      wantPhone: state === 'PHONE',
+    });
+    if (slots.phone && !ctx.phone) ctx.phone = slots.phone;
+    if (slots.extraPhone && !ctx.extraPhone && slots.extraPhone !== ctx.phone) ctx.extraPhone = slots.extraPhone;
+    if (slots.quantity && !ctx.quantity && (ctx.selectedProduct || cart.length > 0)) {
+      ctx.quantity = slots.quantity;
+      if (ctx.selectedProduct && !cart.find((c) => c.product.id === ctx.selectedProduct!.id)) {
+        cart.push({ product: ctx.selectedProduct, quantity: slots.quantity });
+      }
+    }
+    if (slots.province && !ctx.province) ctx.province = slots.province;
+    if (slots.district && !ctx.district) ctx.district = slots.district;
+    if (slots.address && !ctx.address && slots.address.length >= 5) ctx.address = slots.address;
+  }
+
   await stepMachine({ page, erpConfig, convId: conv.id, psid, state, ctx, cart, text });
+}
+
+function nextMissingPrompt(ctx: Ctx, cart: CartItem[]): { state: State; ask: string; quickReplies?: string[] } | null {
+  if (!ctx.selectedProduct && cart.length === 0) {
+    return { state: 'PRODUCT', ask: 'Ямар бүтээгдэхүүн захиалах вэ? Код эсвэл нэрийг бичнэ үү.' };
+  }
+  if (!ctx.quantity) {
+    return { state: 'QUANTITY', ask: 'Хэдэн ширхэг авах вэ?', quickReplies: ['1', '2', '3', 'Өөр тоо'] };
+  }
+  if (!ctx.phone) {
+    return { state: 'PHONE', ask: 'Холбоо барих утасны дугаараа оруулна уу:' };
+  }
+  if (ctx.extraPhone === undefined && !ctx.extraPhoneAsked) {
+    return { state: 'EXTRA_PHONE', ask: 'Нэмэлт утасны дугаар байна уу?', quickReplies: ['Байхгүй'] };
+  }
+  if (!ctx.province) {
+    return { state: 'PROVINCE', ask: 'Хүргэлт хаашаа вэ?', quickReplies: PROVINCES.slice(0, 12) };
+  }
+  if (isUB(ctx.province) && !ctx.district) {
+    return { state: 'DISTRICT', ask: 'Аль дүүрэгт хүргэх вэ?', quickReplies: UB_DISTRICTS };
+  }
+  if (!ctx.address) {
+    return { state: 'ADDRESS', ask: 'Дэлгэрэнгүй хаягаа бичнэ үү:\n(Хороо, байр, тоот, орц, давхар)' };
+  }
+  if (ctx.note === undefined) {
+    return { state: 'NOTE', ask: 'Нэмэлт тэмдэглэл байна уу?', quickReplies: ['Байхгүй'] };
+  }
+  return null;
+}
+
+async function advanceToNextMissing(token: string, psid: string, convId: string, ctx: Ctx, cart: CartItem[]) {
+  const next = nextMissingPrompt(ctx, cart);
+  if (!next) {
+    const summary = buildSummary(cart, ctx);
+    await botSay(token, psid, convId, summary, ['Тийм', 'Болих']);
+    await updateState(convId, 'CONFIRM', ctx, cart);
+    return;
+  }
+  await botSay(token, psid, convId, next.ask, next.quickReplies);
+  await updateState(convId, next.state, ctx, cart);
 }
 
 async function botSay(token: string, psid: string, convId: string, text: string, quickReplies?: string[]) {
@@ -170,35 +230,54 @@ async function stepMachine(a: StepArgs) {
   const t = text.trim();
 
   switch (state) {
-    case 'IDLE': {
-      await botSay(token, psid, convId,
-        'Сайн байна уу! Би захиалга авах бот байна. Ямар бүтээгдэхүүн авахыг хүсч байна вэ? Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.');
-      await updateState(convId, 'PRODUCT', ctx);
-      return;
-    }
+    case 'IDLE':
     case 'PRODUCT': {
       if (!erpConfig) {
         await botSay(token, psid, convId, 'Түр зуурын саатал гарлаа. Оператортой холбогдоно уу.');
         return;
       }
-      if (isBareOrderIntent(t)) {
+      if (isBareOrderIntent(t) && !ctx.selectedProduct && cart.length === 0) {
         await botSay(token, psid, convId,
           'Та ямар бүтээгдэхүүн захиалах вэ? Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.');
+        await updateState(convId, 'PRODUCT', ctx);
         return;
       }
+      const slots = extractSlots(t, { productSelected: false, wantPhone: false });
+      if (slots.phone && !ctx.phone) ctx.phone = slots.phone;
+      if (slots.province && !ctx.province) ctx.province = slots.province;
+      if (slots.district && !ctx.district) ctx.district = slots.district;
+      if (slots.address && !ctx.address && slots.address.length >= 5) ctx.address = slots.address;
+
       const normalized = latinToCyrillic(t);
-      const query = extractProductCode(t) ?? normalized;
+      const query = slots.productCode ?? extractProductCode(t) ?? normalized;
+      if (!query || query.trim().length < 2) {
+        await botSay(token, psid, convId,
+          'Сайн байна уу! Би захиалга авах бот байна. Ямар бүтээгдэхүүн авахыг хүсч байна вэ? Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.');
+        await updateState(convId, 'PRODUCT', ctx, cart);
+        return;
+      }
       const products = await erpSearchProducts(erpConfig, query, 5);
       if (!products.length) {
         await botSay(token, psid, convId, 'Уучлаарай, бүтээгдэхүүн олдсонгүй. Дахин оролдоно уу.');
+        await updateState(convId, 'PRODUCT', ctx, cart);
         return;
       }
       if (products.length === 1) {
         ctx.selectedProduct = products[0];
+        if (slots.quantity) {
+          ctx.quantity = slots.quantity;
+          if (!cart.find((c) => c.product.id === products[0].id)) {
+            cart.push({ product: products[0], quantity: slots.quantity });
+          }
+          await botSay(token, psid, convId,
+            `${products[0].name} x ${slots.quantity}ш сонгогдлоо.`);
+          await advanceToNextMissing(token, psid, convId, ctx, cart);
+          return;
+        }
         await botSay(token, psid, convId,
           `${products[0].name}\nҮнэ: ${products[0].price.toLocaleString()}₮\nХэдэн ширхэг авах вэ?`,
           ['1', '2', '3', 'Өөр тоо']);
-        await updateState(convId, 'QUANTITY', ctx);
+        await updateState(convId, 'QUANTITY', ctx, cart);
         return;
       }
       await sendCarousel(token, psid, products.map((p) => ({
@@ -208,96 +287,95 @@ async function stepMachine(a: StepArgs) {
         buttons: [{ type: 'postback', title: 'Захиалах', payload: `SELECT_${p.id}` }],
       })));
       await prisma.message.create({ data: { conversationId: convId, text: `[Carousel: ${products.length} бараа]`, isFromBot: true } });
+      await updateState(convId, 'PRODUCT', ctx, cart);
       return;
     }
     case 'QUANTITY': {
-      const tl = t.toLowerCase();
-      const wordNums: Record<string, number> = {
-        'нэг': 1, 'хоёр': 2, 'гурав': 3, 'дөрөв': 4, 'тав': 5,
-        'зургаа': 6, 'долоо': 7, 'найм': 8, 'ес': 9, 'арав': 10,
-        'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
-      };
-      let qty = parseInt(t.replace(/[^\d]/g, ''), 10);
-      if ((!qty || qty < 1)) {
-        for (const [w, n] of Object.entries(wordNums)) {
-          if (tl.includes(w)) { qty = n; break; }
+      if (!ctx.quantity) {
+        const tl = t.toLowerCase();
+        const wordNums: Record<string, number> = {
+          'нэг': 1, 'хоёр': 2, 'гурав': 3, 'дөрөв': 4, 'тав': 5,
+          'зургаа': 6, 'долоо': 7, 'найм': 8, 'ес': 9, 'арав': 10,
+          'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+        };
+        let qty = parseInt(t.replace(/[^\d]/g, ''), 10);
+        if ((!qty || qty < 1)) {
+          for (const [w, n] of Object.entries(wordNums)) {
+            if (tl.includes(w)) { qty = n; break; }
+          }
+        }
+        if (!qty || qty < 1) {
+          await botSay(token, psid, convId, 'Тоогоор бичнэ үү. Жишээ: 1, 2, 3');
+          return;
+        }
+        ctx.quantity = qty;
+        if (ctx.selectedProduct && !cart.find((c) => c.product.id === ctx.selectedProduct!.id)) {
+          cart.push({ product: ctx.selectedProduct, quantity: qty });
         }
       }
-      if (!qty || qty < 1) {
-        await botSay(token, psid, convId, 'Тоогоор бичнэ үү. Жишээ: 1, 2, 3');
-        return;
-      }
-      ctx.quantity = qty;
-      if (ctx.selectedProduct) {
-        cart.push({ product: ctx.selectedProduct, quantity: qty });
-      }
-      await botSay(token, psid, convId, 'Холбоо барих утасны дугаараа оруулна уу:');
-      await updateState(convId, 'PHONE', ctx, cart);
+      await advanceToNextMissing(token, psid, convId, ctx, cart);
       return;
     }
     case 'PHONE': {
-      const phone = extractPhone(t);
-      if (!phone) {
-        await botSay(token, psid, convId, '8 оронтой, 7/8/9-өөр эхэлсэн дугаар оруулна уу.\nЖишээ: 88112233');
-        return;
+      if (!ctx.phone) {
+        const phone = extractPhone(t);
+        if (!phone) {
+          await botSay(token, psid, convId, '8 оронтой, 7/8/9-өөр эхэлсэн дугаар оруулна уу.\nЖишээ: 88112233');
+          return;
+        }
+        ctx.phone = phone;
       }
-      const existing = await prisma.order.findFirst({
-        where: { customerPhone: phone, status: { in: ['pending', 'confirmed', 'processing'] } },
-      });
-      if (existing && Date.now() - existing.createdAt.getTime() < 60 * 60 * 1000) {
-        await botSay(token, psid, convId,
-          'Энэ утасны дугаараар идэвхтэй захиалга байна. Асуудал байвал оператортой холбогдоно уу.');
-      }
-      ctx.phone = phone;
-      await botSay(token, psid, convId, 'Нэмэлт утасны дугаар байна уу?', ['Байхгүй']);
-      await updateState(convId, 'EXTRA_PHONE', ctx);
+      await advanceToNextMissing(token, psid, convId, ctx, cart);
       return;
     }
     case 'EXTRA_PHONE': {
-      if (/^\s*0\s*$|байхгүй|байхгуй|bhkg|үгүй|угуй|\bno\b|үгүйээ|ugui/i.test(t)) {
-        ctx.extraPhone = undefined;
-      } else {
-        const extra = extractPhone(t);
-        ctx.extraPhone = extra ?? undefined;
+      if (ctx.extraPhone === undefined) {
+        if (/^\s*0\s*$|байхгүй|байхгуй|bhkg|үгүй|угуй|\bno\b|үгүйээ|ugui/i.test(t)) {
+          ctx.extraPhoneAsked = true;
+        } else {
+          const extra = extractPhone(t);
+          if (extra) {
+            ctx.extraPhone = extra;
+          } else {
+            ctx.extraPhoneAsked = true;
+          }
+        }
       }
-      await botSay(token, psid, convId, 'Хүргэлт хаашаа вэ?', PROVINCES.slice(0, 12));
-      await updateState(convId, 'PROVINCE', ctx);
+      await advanceToNextMissing(token, psid, convId, ctx, cart);
       return;
     }
     case 'PROVINCE': {
-      const normalized = normalizeProvince(t);
-      ctx.province = normalized || t;
-      if (isUB(ctx.province)) {
-        await botSay(token, psid, convId, 'Аль дүүрэгт хүргэх вэ?', UB_DISTRICTS);
-        await updateState(convId, 'DISTRICT', ctx);
-      } else {
-        await botSay(token, psid, convId, 'Дэлгэрэнгүй хаягаа бичнэ үү:\n(Хороо, байр, тоот, орц, давхар)');
-        await updateState(convId, 'ADDRESS', ctx);
+      if (!ctx.province) {
+        const normalized = normalizeProvince(t);
+        ctx.province = normalized || t;
       }
+      await advanceToNextMissing(token, psid, convId, ctx, cart);
       return;
     }
     case 'DISTRICT': {
-      const d = normalizeDistrict(t);
-      ctx.district = d || t.toUpperCase();
-      await botSay(token, psid, convId, 'Дэлгэрэнгүй хаягаа бичнэ үү:\n(Хороо, байр, тоот, орц, давхар)');
-      await updateState(convId, 'ADDRESS', ctx);
+      if (!ctx.district) {
+        const d = normalizeDistrict(t);
+        ctx.district = d || t.toUpperCase();
+      }
+      await advanceToNextMissing(token, psid, convId, ctx, cart);
       return;
     }
     case 'ADDRESS': {
-      if (t.length < 5) {
-        await botSay(token, psid, convId, 'Хаягаа дэлгэрэнгүй бичнэ үү (5-с илүү тэмдэгт).');
-        return;
+      if (!ctx.address) {
+        if (t.length < 5) {
+          await botSay(token, psid, convId, 'Хаягаа дэлгэрэнгүй бичнэ үү (5-с илүү тэмдэгт).');
+          return;
+        }
+        ctx.address = t;
       }
-      ctx.address = t;
-      await botSay(token, psid, convId, 'Нэмэлт тэмдэглэл байна уу?', ['Байхгүй']);
-      await updateState(convId, 'NOTE', ctx);
+      await advanceToNextMissing(token, psid, convId, ctx, cart);
       return;
     }
     case 'NOTE': {
-      ctx.note = /^\s*0\s*$|байхгүй|байхгуй|үгүй|угуй|\bno\b|bhkg|ugui/i.test(t) ? '' : t;
-      const summary = buildSummary(cart, ctx);
-      await botSay(token, psid, convId, summary, ['Тийм', 'Болих']);
-      await updateState(convId, 'CONFIRM', ctx, cart);
+      if (ctx.note === undefined) {
+        ctx.note = /^\s*0\s*$|байхгүй|байхгуй|үгүй|угуй|\bno\b|bhkg|ugui/i.test(t) ? '' : t;
+      }
+      await advanceToNextMissing(token, psid, convId, ctx, cart);
       return;
     }
     case 'CONFIRM': {

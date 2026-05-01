@@ -19,6 +19,23 @@ export function extractProductCode(text: string): string | null {
   return normalizeProductCode(text);
 }
 
+export function extractBareProductCode(text: string): string | null {
+  const prefixed = normalizeProductCode(text);
+  if (prefixed) return prefixed;
+  const tokens = text.split(/\s+/);
+  for (const tok of tokens) {
+    const cleaned = tok.replace(/[^\d]/g, '');
+    if (!cleaned) continue;
+    if (cleaned.length >= 3 && cleaned.length <= 5 && !/^[789]/.test(cleaned)) {
+      return cleaned.padStart(4, '0');
+    }
+    if (cleaned.length >= 3 && cleaned.length <= 5 && cleaned.length !== 8) {
+      return cleaned.padStart(4, '0');
+    }
+  }
+  return null;
+}
+
 export function extractPhone(text: string): string | null {
   const cleaned = text.replace(/[^\d]/g, '');
   const match = cleaned.match(/([789]\d{7})/);

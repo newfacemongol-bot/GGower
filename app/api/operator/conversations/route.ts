@@ -16,6 +16,11 @@ export async function GET() {
       messages: { orderBy: { timestamp: 'desc' }, take: 1 },
     },
   });
+  const psids = items.map((c) => c.psid);
+  const spamBlocks = psids.length
+    ? await prisma.spamBlock.findMany({ where: { psid: { in: psids } } })
+    : [];
+  const spamSet = new Set(spamBlocks.map((b) => `${b.pageId}:${b.psid}`));
   return NextResponse.json({
     items: items.map((c) => ({
       id: c.id,
@@ -28,6 +33,7 @@ export async function GET() {
       lastMessageAt: c.lastMessageAt,
       lastMessage: c.messages[0]?.text,
       status: c.status,
+      isSpam: spamSet.has(`${c.pageId}:${c.psid}`),
     })),
   });
 }

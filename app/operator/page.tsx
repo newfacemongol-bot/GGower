@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, Bot, User, LogOut, FileText, StickyNote } from 'lucide-react';
+import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Template { id: string; title: string; text: string; shortcut: string | null; }
@@ -10,6 +10,7 @@ interface ConvItem {
   id: string; senderName?: string | null; pageName?: string;
   state: string; isOperatorHandoff: boolean; unreadCount: number;
   lastMessageAt: string; lastMessage?: string; status: string;
+  isSpam?: boolean;
 }
 
 export default function OperatorPage() {
@@ -108,6 +109,21 @@ export default function OperatorPage() {
     loadConv(conv.id);
   }
 
+  async function resetConv(id: string, e?: React.MouseEvent) {
+    e?.stopPropagation();
+    if (!confirm('Энэ харилцан яриаг дахин эхлүүлэх үү?')) return;
+    await fetch(`/api/operator/conversations/${id}/reset`, { method: 'POST' });
+    loadList();
+    if (activeId === id) loadConv(id);
+  }
+
+  async function unspam(id: string, e?: React.MouseEvent) {
+    e?.stopPropagation();
+    await fetch(`/api/operator/conversations/${id}/unspam`, { method: 'POST' });
+    loadList();
+    if (activeId === id) loadConv(id);
+  }
+
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/');
@@ -122,18 +138,46 @@ export default function OperatorPage() {
         </div>
         <div className="flex-1 overflow-auto divide-y divide-slate-100">
           {list.map((c) => (
-            <button key={c.id} onClick={() => setActiveId(c.id)}
-              className={`w-full text-left px-4 py-3 hover:bg-slate-50 ${activeId === c.id ? 'bg-slate-100' : ''}`}>
-              <div className="flex items-center justify-between mb-0.5">
+            <div
+              key={c.id}
+              onClick={() => setActiveId(c.id)}
+              className={`w-full text-left px-4 py-3 hover:bg-slate-50 cursor-pointer ${activeId === c.id ? 'bg-slate-100' : ''}`}
+            >
+              <div className="flex items-center justify-between mb-0.5 gap-2">
                 <span className="font-medium text-slate-900 text-sm truncate">{c.senderName || 'Unknown'}</span>
-                {c.unreadCount > 0 && <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">{c.unreadCount}</span>}
+                <div className="flex items-center gap-1 shrink-0">
+                  {c.unreadCount > 0 && <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">{c.unreadCount}</span>}
+                </div>
               </div>
               <div className="text-xs text-slate-500 truncate">{c.lastMessage || '—'}</div>
-              <div className="flex items-center gap-2 mt-1 text-xs">
+              <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
                 <span className="text-slate-400">{c.pageName}</span>
                 <StatusIcon status={c.status} handoff={c.isOperatorHandoff} />
+                {c.isSpam && (
+                  <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">
+                    <ShieldAlert className="w-3 h-3" /> Spam
+                  </span>
+                )}
               </div>
-            </button>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={(e) => resetConv(c.id, e)}
+                  className="inline-flex items-center gap-1 text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-100 text-slate-700"
+                  title="Харилцан яриаг дахин эхлүүлэх"
+                >
+                  <RotateCcw className="w-3 h-3" /> Дахин эхлэх
+                </button>
+                {c.isSpam && (
+                  <button
+                    onClick={(e) => unspam(c.id, e)}
+                    className="inline-flex items-center gap-1 text-xs px-2 py-1 border border-red-300 text-red-700 rounded hover:bg-red-50"
+                    title="Spam блокийг буцаах"
+                  >
+                    Буцаах
+                  </button>
+                )}
+              </div>
+            </div>
           ))}
           {!list.length && <div className="p-8 text-center text-slate-500 text-sm">Чат байхгүй</div>}
         </div>

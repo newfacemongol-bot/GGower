@@ -1,7 +1,8 @@
 import { prisma } from './prisma';
 import { sendText, sendCarousel, fetchUserProfile } from './facebook';
 import { erpSearchProducts, erpGetProduct, erpCreateOrder, erpSearchOrders, type ErpConfigShape, type ErpProduct } from './erp';
-import { extractProductCode, extractPhone, isOrderIntent } from './product-code';
+import { extractProductCode, extractPhone, isOrderIntent, isBareOrderIntent } from './product-code';
+import { latinToCyrillic } from './translit';
 import { PROVINCES, UB_DISTRICTS, isUB } from './provinces';
 import { getDeliveryMessage, isBotEnabled, isNightMode } from './settings';
 
@@ -180,7 +181,13 @@ async function stepMachine(a: StepArgs) {
         await botSay(token, psid, convId, 'Түр зуурын саатал гарлаа. Оператортой холбогдоно уу.');
         return;
       }
-      const query = extractProductCode(t) ?? t;
+      if (isBareOrderIntent(t)) {
+        await botSay(token, psid, convId,
+          'Та ямар бүтээгдэхүүн захиалах вэ? Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.');
+        return;
+      }
+      const normalized = latinToCyrillic(t);
+      const query = extractProductCode(t) ?? normalized;
       const products = await erpSearchProducts(erpConfig, query, 5);
       if (!products.length) {
         await botSay(token, psid, convId, 'Уучлаарай, бүтээгдэхүүн олдсонгүй. Дахин оролдоно уу.');

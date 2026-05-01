@@ -27,7 +27,16 @@ export function extractPhone(text: string): string | null {
 
 export function isOrderIntent(text: string): boolean {
   const t = text.toLowerCase();
-  return /захиалах|zahialah|zahialga|захиалга/.test(t);
+  return /захиалах|захиалга|захиалмаар|захиалъя|захиалая|захиалаад|авмаар|авъя|авая|авмар|zahialah|zahialga|zahialmaar|avmaar|avya/.test(t);
+}
+
+export function isBareOrderIntent(text: string): boolean {
+  const t = text.toLowerCase().trim();
+  if (!isOrderIntent(t)) return false;
+  const withoutIntent = t
+    .replace(/захиалга.*өгөе|захиалга.*өгмөөр|захиалга.*өгье|захиалмаар( байна)?|захиалая|захиалъя|авмаар( байна)?|авъя|авая|захиалах|zahialga|zahialah|zahialmaar|avmaar/g, '')
+    .replace(/[.,!?\s]+/g, '');
+  return withoutIntent.length < 3;
 }
 
 export function detectProductMessage(text: string): { productCode: string | null; hasOrderIntent: boolean } {

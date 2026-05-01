@@ -3,7 +3,7 @@ import { sendText, sendCarousel, fetchUserProfile } from './facebook';
 import { erpSearchProducts, erpGetProduct, erpCreateOrder, erpSearchOrders, type ErpConfigShape, type ErpProduct } from './erp';
 import { extractProductCode, extractPhone, isOrderIntent, isBareOrderIntent } from './product-code';
 import { latinToCyrillic } from './translit';
-import { PROVINCES, UB_DISTRICTS, isUB } from './provinces';
+import { PROVINCES, UB_DISTRICTS, isUB, normalizeProvince, normalizeDistrict } from './provinces';
 import { getDeliveryMessage, isBotEnabled, isNightMode } from './settings';
 
 type State =
@@ -211,7 +211,18 @@ async function stepMachine(a: StepArgs) {
       return;
     }
     case 'QUANTITY': {
-      const qty = parseInt(t.replace(/[^\d]/g, ''), 10);
+      const tl = t.toLowerCase();
+      const wordNums: Record<string, number> = {
+        'нэг': 1, 'хоёр': 2, 'гурав': 3, 'дөрөв': 4, 'тав': 5,
+        'зургаа': 6, 'долоо': 7, 'найм': 8, 'ес': 9, 'арав': 10,
+        'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+      };
+      let qty = parseInt(t.replace(/[^\d]/g, ''), 10);
+      if ((!qty || qty < 1)) {
+        for (const [w, n] of Object.entries(wordNums)) {
+          if (tl.includes(w)) { qty = n; break; }
+        }
+      }
       if (!qty || qty < 1) {
         await botSay(token, psid, convId, 'Тоогоор бичнэ үү. Жишээ: 1, 2, 3');
         return;
@@ -243,7 +254,7 @@ async function stepMachine(a: StepArgs) {
       return;
     }
     case 'EXTRA_PHONE': {
-      if (/байхгүй|үгүй|no/i.test(t)) {
+      if (/^\s*0\s*$|байхгүй|байхгуй|bhkg|үгүй|угуй|\bno\b|үгүйээ|ugui/i.test(t)) {
         ctx.extraPhone = undefined;
       } else {
         const extra = extractPhone(t);
@@ -254,8 +265,8 @@ async function stepMachine(a: StepArgs) {
       return;
     }
     case 'PROVINCE': {
-      const match = PROVINCES.find((p) => t.toLowerCase().includes(p.toLowerCase().split('-')[0])) ?? t;
-      ctx.province = typeof match === 'string' ? match : t;
+      const normalized = normalizeProvince(t);
+      ctx.province = normalized || t;
       if (isUB(ctx.province)) {
         await botSay(token, psid, convId, 'Аль дүүрэгт хүргэх вэ?', UB_DISTRICTS);
         await updateState(convId, 'DISTRICT', ctx);
@@ -266,7 +277,8 @@ async function stepMachine(a: StepArgs) {
       return;
     }
     case 'DISTRICT': {
-      ctx.district = t;
+      const d = normalizeDistrict(t);
+      ctx.district = d || t.toUpperCase();
       await botSay(token, psid, convId, 'Дэлгэрэнгүй хаягаа бичнэ үү:\n(Хороо, байр, тоот, орц, давхар)');
       await updateState(convId, 'ADDRESS', ctx);
       return;
@@ -282,18 +294,18 @@ async function stepMachine(a: StepArgs) {
       return;
     }
     case 'NOTE': {
-      ctx.note = /байхгүй|үгүй|no/i.test(t) ? '' : t;
+      ctx.note = /^\s*0\s*$|байхгүй|байхгуй|үгүй|угуй|\bno\b|bhkg|ugui/i.test(t) ? '' : t;
       const summary = buildSummary(cart, ctx);
       await botSay(token, psid, convId, summary, ['Тийм', 'Болих']);
       await updateState(convId, 'CONFIRM', ctx, cart);
       return;
     }
     case 'CONFIRM': {
-      if (/тийм|yes|баталгаажуул|ok/i.test(t)) {
+      if (/тийм|тиймээ|тээ|за\b|болно|зөв|zov|yes|yep|yeah|баталгаажуул|batalgaa|ok|okay|tiim/i.test(t)) {
         await submitOrder(page, erpConfig, convId, psid, ctx, cart);
         return;
       }
-      if (/болих|cancel|үгүй/i.test(t)) {
+      if (/болих|цуцлах|tsutslah|bolih|cancel|үгүй|угуй|\bno\b|ugui/i.test(t)) {
         await botSay(token, psid, convId, 'Захиалга цуцлагдлаа. Шинэ захиалга өгөхийн тулд бүтээгдэхүүний нэрээ бичнэ үү.');
         await updateState(convId, 'IDLE', {}, []);
         return;

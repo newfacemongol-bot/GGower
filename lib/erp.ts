@@ -174,7 +174,8 @@ export async function erpCreateOrder(
         "customOrder",
         "excludedFromPerformance",
         "cancelledProductsReturnedToWarehouse",
-        "rescheduledProductsReturnedToWarehouse"
+        "rescheduledProductsReturnedToWarehouse",
+        "updatedAt"
       ) VALUES (
         ${orderNumber},
         ${customerName},
@@ -199,7 +200,8 @@ export async function erpCreateOrder(
         ${false},
         ${false},
         ${false},
-        ${false}
+        ${false},
+        ${new Date()}
       )
       RETURNING id, "orderNumber", status::text AS status
     `;

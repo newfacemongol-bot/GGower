@@ -15,3 +15,12 @@ function createClient(): PrismaClient {
 export const erpDb = globalForErp.erpDb ?? createClient();
 
 if (process.env.NODE_ENV !== 'production') globalForErp.erpDb = erpDb;
+
+export function resolveErpImageUrl(image: string | null | undefined): string | null {
+  if (!image) return null;
+  if (image.startsWith('/')) {
+    const base = (process.env.ERP_BASE_URL || '').replace(/\/$/, '');
+    return base + image;
+  }
+  return image;
+}

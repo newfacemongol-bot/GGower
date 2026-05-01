@@ -1,4 +1,4 @@
-import { erpDb } from './erp-db';
+import { erpDb, resolveErpImageUrl } from './erp-db';
 
 export interface ErpProduct {
   id: string;
@@ -31,7 +31,7 @@ function rowToProduct(r: ProductRow): ErpProduct {
     name: r.name,
     price: r.price,
     stock: r.stock,
-    images: r.image ? [r.image] : [],
+    images: r.image ? [resolveErpImageUrl(r.image) as string] : [],
   };
 }
 

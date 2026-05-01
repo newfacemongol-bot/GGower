@@ -1,13 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 export default function OperatorLoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -16,14 +14,15 @@ export default function OperatorLoginPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password, role: 'operator' }),
+      credentials: 'same-origin',
     });
-    setLoading(false);
     if (!res.ok) {
+      setLoading(false);
       const d = await res.json().catch(() => ({}));
       toast.error(d.error || 'Буруу нууц үг');
       return;
     }
-    router.push('/operator');
+    window.location.href = '/operator';
   }
 
   return (

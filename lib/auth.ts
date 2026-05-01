@@ -30,7 +30,7 @@ export async function destroySession(): Promise<void> {
 export function setSessionCookie(token: string) {
   cookies().set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false,
     sameSite: 'lax',
     path: '/',
     maxAge: SESSION_DAYS * 24 * 60 * 60,

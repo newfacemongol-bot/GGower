@@ -13,7 +13,7 @@ export function verifySignature(payload: string, signature: string | null): bool
   }
 }
 
-export async function sendMessage(pageAccessToken: string, psid: string, message: any): Promise<void> {
+export async function sendMessage(pageAccessToken: string, psid: string, message: any): Promise<boolean> {
   try {
     const res = await fetch(`${GRAPH}/me/messages?access_token=${pageAccessToken}`, {
       method: 'POST',
@@ -22,13 +22,28 @@ export async function sendMessage(pageAccessToken: string, psid: string, message
     });
     if (!res.ok) {
       console.error('FB sendMessage error:', await res.text().catch(() => ''));
+      return false;
     }
+    return true;
   } catch (e) {
     console.error('FB sendMessage exception:', e);
+    return false;
   }
 }
 
-export async function sendText(pageAccessToken: string, psid: string, text: string, quickReplies?: string[]): Promise<void> {
+export async function sendSenderAction(pageAccessToken: string, psid: string, action: 'typing_on' | 'typing_off' | 'mark_seen'): Promise<void> {
+  try {
+    await fetch(`${GRAPH}/me/messages?access_token=${pageAccessToken}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient: { id: psid }, sender_action: action }),
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function sendText(pageAccessToken: string, psid: string, text: string, quickReplies?: string[]): Promise<boolean> {
   const message: any = { text };
   if (quickReplies && quickReplies.length) {
     message.quick_replies = quickReplies.slice(0, 13).map((q) => ({
@@ -37,15 +52,21 @@ export async function sendText(pageAccessToken: string, psid: string, text: stri
       payload: q,
     }));
   }
-  await sendMessage(pageAccessToken, psid, message);
+  return sendMessage(pageAccessToken, psid, message);
 }
 
-export async function sendCarousel(pageAccessToken: string, psid: string, elements: any[]): Promise<void> {
-  await sendMessage(pageAccessToken, psid, {
+export async function sendCarousel(pageAccessToken: string, psid: string, elements: any[]): Promise<boolean> {
+  return sendMessage(pageAccessToken, psid, {
     attachment: {
       type: 'template',
       payload: { template_type: 'generic', elements: elements.slice(0, 10) },
     },
+  });
+}
+
+export async function sendImage(pageAccessToken: string, psid: string, url: string): Promise<boolean> {
+  return sendMessage(pageAccessToken, psid, {
+    attachment: { type: 'image', payload: { url, is_reusable: true } },
   });
 }
 

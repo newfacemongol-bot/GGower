@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, MessageCircle, ListOrdered, Settings, Database, Facebook, LogOut } from 'lucide-react';
+import { LayoutDashboard, MessageCircle, ListOrdered, Settings, Database, Facebook, FileText } from 'lucide-react';
 import LogoutButton from '@/components/logout-button';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <NavLink href="/admin/settings" icon={<Settings className="w-4 h-4" />}>Тохиргоо</NavLink>
           <NavLink href="/admin/settings/erp" icon={<Database className="w-4 h-4" />}>ERP</NavLink>
           <NavLink href="/admin/settings/pages" icon={<Facebook className="w-4 h-4" />}>Facebook Пэйж</NavLink>
+          <NavLink href="/admin/settings/templates" icon={<FileText className="w-4 h-4" />}>Бэлэн хариу</NavLink>
         </nav>
         <div className="p-3 border-t border-slate-200">
           <LogoutButton />

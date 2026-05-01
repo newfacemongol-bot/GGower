@@ -52,6 +52,12 @@ model Conversation {
   lastMessageAt      DateTime @default(now())
   status             String   @default("active")
   unreadCount        Int      @default(0)
+  abandonedAt        DateTime?
+  reminder1SentAt    DateTime?
+  reminder23SentAt   DateTime?
+  handoffReason      String?
+  misunderstandCount Int      @default(0)
+  history            Json     @default("[]")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -62,6 +68,7 @@ model Conversation {
   @@unique([pageId, psid])
   @@index([lastMessageAt])
   @@index([status])
+  @@index([abandonedAt])
 }
 
 model Message {
@@ -119,6 +126,9 @@ model Order {
   products        Json
   totalAmount     Int      @default(0)
   status          String   @default("pending")
+  retryCount      Int      @default(0)
+  lastRetryAt     DateTime?
+  lastError       String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -127,6 +137,7 @@ model Order {
 
   @@index([customerPhone])
   @@index([status])
+  @@index([status, retryCount])
 }
 
 model Setting {
@@ -141,6 +152,44 @@ model CommentReply {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ReplyTemplate {
+  id        String   @id @default(cuid())
+  title     String
+  text      String
+  shortcut  String?
+  useCount  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String
+  actorId    String?
+  actorRole  String?
+  meta       Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model SpamBlock {
+  id        String   @id @default(cuid())
+  psid      String   @unique
+  pageId    String
+  reason    String
+  orderCount Int     @default(0)
+  blockedAt DateTime @default(now())
+
+  @@index([pageId])
 }
 
 model AdminSession {

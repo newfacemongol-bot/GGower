@@ -10,9 +10,25 @@ export async function GET() {
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
+  const last5min = new Date(Date.now() - 5 * 60 * 1000);
 
-  const [todayOrders, totalComments, repliedComments, pendingChats, queuedComments, pages] = await Promise.all([
+  const [
+    todayOrders,
+    todayOrdersFailed,
+    totalComments,
+    repliedComments,
+    pendingChats,
+    queuedComments,
+    pages,
+    todayConvs,
+    todayCompletedOrders,
+    activeNow,
+    failedOrders,
+    abandonedCarts,
+    spamBlocked,
+  ] = await Promise.all([
     prisma.order.count({ where: { createdAt: { gte: startOfDay } } }),
+    prisma.order.count({ where: { createdAt: { gte: startOfDay }, status: 'failed' } }),
     prisma.commentLead.count({ where: { queuedAt: { gte: startOfDay } } }),
     prisma.commentLead.count({ where: { repliedAt: { gte: startOfDay } } }),
     prisma.conversation.count({ where: { isOperatorHandoff: true, status: 'active' } }),
@@ -22,14 +38,30 @@ export async function GET() {
         _count: { select: { comments: true, conversations: true } },
       },
     }),
+    prisma.conversation.count({ where: { createdAt: { gte: startOfDay } } }),
+    prisma.order.count({ where: { createdAt: { gte: startOfDay }, status: { not: 'failed' } } }),
+    prisma.conversation.count({ where: { lastMessageAt: { gte: last5min } } }),
+    prisma.order.count({ where: { status: 'failed' } }),
+    prisma.conversation.count({ where: { abandonedAt: { not: null }, state: 'CONFIRM' } }),
+    prisma.spamBlock.count(),
   ]);
+
+  const conversionRate = todayConvs > 0 ? Math.round((todayCompletedOrders / todayConvs) * 1000) / 10 : 0;
 
   return NextResponse.json({
     todayOrders,
+    todayOrdersFailed,
     totalComments,
     repliedComments,
     pendingChats,
     queuedComments,
+    activeNow,
+    failedOrders,
+    abandonedCarts,
+    spamBlocked,
+    conversionRate,
+    todayConvs,
+    todayCompletedOrders,
     pages: pages.map((p) => ({
       pageId: p.pageId,
       pageName: p.pageName,

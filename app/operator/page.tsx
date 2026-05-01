@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, Bot, User, CircleCheck as CheckCircle2, LogOut } from 'lucide-react';
+import { Send, Bot, User, LogOut, FileText, StickyNote } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+interface Template { id: string; title: string; text: string; shortcut: string | null; }
 
 interface ConvItem {
   id: string; senderName?: string | null; pageName?: string;
@@ -15,8 +17,23 @@ export default function OperatorPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [conv, setConv] = useState<any>(null);
   const [text, setText] = useState('');
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [editingNote, setEditingNote] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/admin/templates').then((r) => r.json()).then((d) => setTemplates(d.templates ?? [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (conv) {
+      setNoteDraft(conv.handoffReason ?? '');
+      setEditingNote(false);
+    }
+  }, [conv?.id]);
 
   async function loadList() {
     const r = await fetch('/api/operator/conversations');
@@ -51,6 +68,27 @@ export default function OperatorPage() {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: msg }),
     });
     loadConv(activeId);
+  }
+
+  function applyTemplate(t: Template) {
+    setText(t.text);
+    setShowTemplates(false);
+    fetch(`/api/admin/templates/${t.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ incrementUse: true }),
+    }).catch(() => {});
+  }
+
+  async function saveNote() {
+    if (!conv) return;
+    await fetch(`/api/operator/conversations/${conv.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ handoffReason: noteDraft }),
+    });
+    setEditingNote(false);
+    loadConv(conv.id);
   }
 
   async function toggleHandoff() {
@@ -119,19 +157,75 @@ export default function OperatorPage() {
                 </button>
               </div>
             </header>
+            <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center gap-2 text-sm">
+              <StickyNote className="w-4 h-4 text-amber-700 shrink-0" />
+              {editingNote ? (
+                <>
+                  <input
+                    className="flex-1 bg-white border border-amber-300 rounded px-2 py-1 text-sm"
+                    value={noteDraft}
+                    onChange={(e) => setNoteDraft(e.target.value)}
+                    placeholder="Тэмдэглэл... (ж: үнэ эргэлзэлтэй)"
+                    autoFocus
+                  />
+                  <button onClick={saveNote} className="text-sm px-2 py-1 bg-amber-600 text-white rounded">Хадгалах</button>
+                  <button onClick={() => { setEditingNote(false); setNoteDraft(conv.handoffReason ?? ''); }} className="text-sm px-2 py-1 text-slate-600">Болих</button>
+                </>
+              ) : (
+                <>
+                  <span className="flex-1 text-amber-900 truncate">
+                    {conv.handoffReason ? conv.handoffReason : <span className="text-amber-700/60 italic">Тэмдэглэл байхгүй</span>}
+                  </span>
+                  <button onClick={() => setEditingNote(true)} className="text-xs text-amber-700 hover:underline">
+                    Засах
+                  </button>
+                </>
+              )}
+            </div>
             <div className="flex-1 overflow-auto p-6 space-y-3">
               {conv.messages.map((m: any) => (
                 <MessageBubble key={m.id} message={m} />
               ))}
               <div ref={endRef} />
             </div>
-            <footer className="bg-white border-t border-slate-200 p-4 flex gap-2">
-              <input value={text} onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && send()}
-                placeholder="Мессеж бичих..." className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900" />
-              <button onClick={send} className="bg-slate-900 text-white px-4 rounded-lg hover:bg-slate-800">
-                <Send className="w-4 h-4" />
-              </button>
+            <footer className="bg-white border-t border-slate-200 p-4 relative">
+              {showTemplates && (
+                <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-72 overflow-auto">
+                  {templates.length === 0 && (
+                    <div className="p-4 text-sm text-slate-500 text-center">Template байхгүй байна</div>
+                  )}
+                  {templates.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => applyTemplate(t)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                    >
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-medium text-slate-900 text-sm">{t.title}</span>
+                        {t.shortcut && (
+                          <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">{t.shortcut}</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500 line-clamp-2">{t.text}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowTemplates((v) => !v)}
+                  className="px-3 border border-slate-300 rounded-lg hover:bg-slate-50"
+                  title="Template"
+                >
+                  <FileText className="w-4 h-4" />
+                </button>
+                <input value={text} onChange={(e) => setText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && send()}
+                  placeholder="Мессеж бичих..." className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900" />
+                <button onClick={send} className="bg-slate-900 text-white px-4 rounded-lg hover:bg-slate-800">
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
             </footer>
           </>
         )}

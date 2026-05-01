@@ -1,11 +1,17 @@
 import { prisma } from './prisma';
-import { sendText, sendCarousel, fetchUserProfile } from './facebook';
+import { sendText, sendCarousel, sendImage, sendSenderAction, fetchUserProfile } from './facebook';
 import { erpSearchProducts, erpGetProduct, erpCreateOrder, erpSearchOrders, type ErpConfigShape, type ErpProduct } from './erp';
 import { extractProductCode, extractPhone, isOrderIntent, isBareOrderIntent } from './product-code';
 import { latinToCyrillic } from './translit';
 import { PROVINCES, UB_DISTRICTS, isUB, normalizeProvince, normalizeDistrict } from './provinces';
 import { extractSlots } from './slot-extract';
 import { getDeliveryMessage, isBotEnabled, isNightMode } from './settings';
+import { extractPriceRange } from './fuzzy';
+import { logAudit } from './audit';
+
+const SPAM_ORDER_THRESHOLD = 5;
+const SPAM_WINDOW_HOURS = 24;
+const MAX_MISUNDERSTAND = 2;
 
 type State =
   | 'IDLE' | 'PRODUCT' | 'PRODUCT_DETECTED' | 'QUANTITY'
@@ -24,9 +30,26 @@ interface Ctx {
   lastMessageTimes?: number[];
   rateLimitedUntil?: number;
   extraPhoneAsked?: boolean;
+  misunderstandCount?: number;
 }
 
 interface CartItem { product: ErpProduct; quantity: number; }
+
+interface HistoryEntry {
+  state: State;
+  ctx: Ctx;
+  cart: CartItem[];
+  at: number;
+}
+
+const BACK_WORDS = /^(буцах|өмнөх|back|цуцал.*сүүлийн|буцаая|өмнөхрүү|өмнө рүү)\b/i;
+const CART_VIEW_WORDS = /сагс харах|миний сагс|захиалсан бараа|view cart|нийт бараа/i;
+const ADD_MORE_WORDS = /нэмэлт бараа|өөр бараа|дахин нэмэх|бас нэмэх|add more|бараа нэмэх/i;
+
+function pushHistory(history: HistoryEntry[], state: State, ctx: Ctx, cart: CartItem[]): HistoryEntry[] {
+  const next = [...history, { state, ctx: { ...ctx }, cart: cart.map((c) => ({ ...c })), at: Date.now() }];
+  return next.slice(-10);
+}
 
 export async function handleIncoming(pageId: string, psid: string, text: string, senderName?: string) {
   if (!(await isBotEnabled())) return;
@@ -90,23 +113,70 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
     return;
   }
 
-  const lowered = text.trim().toLowerCase();
-  if (/оператор|хүн рүү|ажилтан|operator/.test(lowered)) {
+  const spam = await prisma.spamBlock.findUnique({ where: { psid } }).catch(() => null);
+  if (spam) {
     await prisma.conversation.update({
       where: { id: conv.id },
-      data: { isOperatorHandoff: true, lastMessageAt: new Date(), unreadCount: { increment: 1 } },
+      data: { isOperatorHandoff: true, handoffReason: 'spam', lastMessageAt: new Date(), unreadCount: { increment: 1 } },
     });
-    await botSay(page.accessToken, psid, conv.id, 'Таныг оператортой холбож байна. Түр хүлээнэ үү.');
     return;
   }
 
-  if (/захиалга.*хаана|хаана байна/.test(lowered)) {
-    await handleOrderStatusRequest(page, conv.id, psid);
+  const lowered = text.trim().toLowerCase();
+  if (/оператор|хүн рүү|ажилтан|operator/.test(lowered)) {
+    await handoffToOperator(page.accessToken, psid, conv.id, 'user_request');
+    return;
+  }
+
+  if (/захиалга.*хаана|хаана байна|захиалга шалгах|захиалга хянах|order status|миний захиалга/.test(lowered)) {
+    await handleOrderStatusRequest(page, conv.id, psid, text);
     return;
   }
 
   const cart = (conv.cart as unknown as CartItem[]) || [];
   const state = conv.state as State;
+  const history = (conv.history as unknown as HistoryEntry[]) || [];
+
+  if (BACK_WORDS.test(text.trim())) {
+    if (history.length > 0) {
+      const prev = history[history.length - 1];
+      const trimmed = history.slice(0, -1);
+      await prisma.conversation.update({
+        where: { id: conv.id },
+        data: {
+          state: prev.state,
+          context: prev.ctx as any,
+          cart: prev.cart as any,
+          history: trimmed as any,
+          lastMessageAt: new Date(),
+        },
+      });
+      await botSay(page.accessToken, psid, conv.id, 'Өмнөх алхам руу буцлаа. Дахин оруулна уу.');
+      return;
+    }
+    await botSay(page.accessToken, psid, conv.id, 'Буцах алхам байхгүй байна.');
+    return;
+  }
+
+  if (CART_VIEW_WORDS.test(text)) {
+    await sendCartView(page.accessToken, psid, conv.id, cart);
+    return;
+  }
+
+  if (/^захиалах$/i.test(text.trim()) && cart.length > 0) {
+    const nextCtx = (conv.context as Ctx) || {};
+    await advanceToNextMissing(page.accessToken, psid, conv.id, nextCtx, cart);
+    return;
+  }
+
+  if (ADD_MORE_WORDS.test(text) && cart.length > 0) {
+    const nextCtx = { ...(conv.context as Ctx) };
+    delete nextCtx.selectedProduct;
+    delete nextCtx.quantity;
+    await botSay(page.accessToken, psid, conv.id, 'Дараагийн бүтээгдэхүүний нэр эсвэл кодыг бичнэ үү.');
+    await updateState(conv.id, 'PRODUCT', nextCtx, cart);
+    return;
+  }
   const erpConfig: ErpConfigShape | null = page.erpConfig
     ? { apiUrl: page.erpConfig.apiUrl, apiKey: page.erpConfig.apiKey }
     : null;
@@ -179,15 +249,91 @@ async function advanceToNextMissing(token: string, psid: string, convId: string,
 }
 
 async function botSay(token: string, psid: string, convId: string, text: string, quickReplies?: string[]) {
+  await sendSenderAction(token, psid, 'mark_seen');
+  await sendSenderAction(token, psid, 'typing_on');
+  await new Promise((r) => setTimeout(r, 400));
   await sendText(token, psid, text, quickReplies);
+  await sendSenderAction(token, psid, 'typing_off');
   await prisma.message.create({ data: { conversationId: convId, text, isFromBot: true } });
   await prisma.conversation.update({ where: { id: convId }, data: { lastMessageAt: new Date() } });
 }
 
+async function botSayImage(token: string, psid: string, convId: string, url: string) {
+  await sendImage(token, psid, url);
+  await prisma.message.create({ data: { conversationId: convId, text: `[Зураг: ${url}]`, isFromBot: true } });
+}
+
+async function handoffToOperator(token: string, psid: string, convId: string, reason: string) {
+  await prisma.conversation.update({
+    where: { id: convId },
+    data: { isOperatorHandoff: true, handoffReason: reason, lastMessageAt: new Date(), unreadCount: { increment: 1 } },
+  });
+  await botSay(token, psid, convId, 'Таныг оператортой холбож байна. Түр хүлээнэ үү.');
+  await logAudit({ entityType: 'conversation', entityId: convId, action: 'handoff', actorRole: 'bot', meta: { reason } });
+}
+
 async function updateState(convId: string, state: State, ctx: Ctx, cart?: CartItem[]) {
+  const current = await prisma.conversation.findUnique({ where: { id: convId } });
   const data: any = { state, context: ctx as any, lastMessageAt: new Date() };
   if (cart) data.cart = cart as any;
+  if (current && current.state !== state) {
+    const hist = (current.history as unknown as HistoryEntry[]) || [];
+    data.history = pushHistory(
+      hist,
+      current.state as State,
+      (current.context as Ctx) || {},
+      (current.cart as unknown as CartItem[]) || [],
+    ) as any;
+  }
+  if (state === 'CONFIRM') {
+    data.abandonedAt = new Date();
+    data.reminder1SentAt = null;
+    data.reminder23SentAt = null;
+  } else if (state === 'DONE' || state === 'IDLE') {
+    data.abandonedAt = null;
+  }
   await prisma.conversation.update({ where: { id: convId }, data });
+}
+
+async function sendCartView(token: string, psid: string, convId: string, cart: CartItem[]) {
+  if (!cart.length) {
+    await botSay(token, psid, convId, 'Таны сагс хоосон байна.');
+    return;
+  }
+  const lines = cart.map(
+    (c, i) => `${i + 1}. ${c.product.name} x ${c.quantity}ш = ${(c.product.price * c.quantity).toLocaleString()}₮`,
+  );
+  const total = cart.reduce((s, c) => s + c.product.price * c.quantity, 0);
+  await botSay(
+    token,
+    psid,
+    convId,
+    `Таны сагс:\n${lines.join('\n')}\n------------------------\nНийт: ${total.toLocaleString()}₮`,
+    ['Нэмэлт бараа нэмэх', 'Захиалах'],
+  );
+}
+
+async function sendProductGallery(token: string, psid: string, convId: string, product: ErpProduct) {
+  const images = (product.images || []).filter(Boolean);
+  if (images.length <= 1) return;
+  for (const url of images.slice(0, 4)) {
+    await botSayImage(token, psid, convId, url);
+  }
+}
+
+async function checkAndFlagSpam(pageId: string, psid: string, convId: string): Promise<boolean> {
+  const since = new Date(Date.now() - SPAM_WINDOW_HOURS * 60 * 60 * 1000);
+  const orders = await prisma.order.count({ where: { conversationId: convId, createdAt: { gte: since } } });
+  if (orders >= SPAM_ORDER_THRESHOLD) {
+    await prisma.spamBlock.upsert({
+      where: { psid },
+      create: { psid, pageId, reason: 'order_flood', orderCount: orders },
+      update: { orderCount: orders, blockedAt: new Date() },
+    });
+    await logAudit({ entityType: 'spam', entityId: psid, action: 'blocked', meta: { orders, pageId } });
+    return true;
+  }
+  return false;
 }
 
 async function enterProductDetected(
@@ -208,8 +354,28 @@ async function enterProductDetected(
   await updateState(convId, 'QUANTITY', ctx);
 }
 
-async function handleOrderStatusRequest(page: any, convId: string, psid: string) {
-  await botSay(page.accessToken, psid, convId, 'Захиалгын дугаараа эсвэл утасны дугаараа бичнэ үү:');
+async function handleOrderStatusRequest(page: any, convId: string, psid: string, text: string) {
+  const phone = extractPhone(text);
+  let searchPhone = phone;
+  if (!searchPhone) {
+    const lastOrder = await prisma.order.findFirst({
+      where: { conversationId: convId },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (lastOrder) searchPhone = lastOrder.customerPhone;
+  }
+  if (searchPhone && page.erpConfig) {
+    const orders = await erpSearchOrders(
+      { apiUrl: page.erpConfig.apiUrl, apiKey: page.erpConfig.apiKey },
+      searchPhone,
+    ).catch(() => []);
+    if (orders.length) {
+      await botSay(page.accessToken, psid, convId,
+        `Таны захиалга:\n${orders.slice(0, 5).map((o: any) => `#${o.orderNumber || o.id} - ${o.status}`).join('\n')}`);
+      return;
+    }
+  }
+  await botSay(page.accessToken, psid, convId, 'Утасны дугаараа бичнэ үү. Би таны захиалгуудыг шалгаж өгнө.');
 }
 
 interface StepArgs {
@@ -268,15 +434,46 @@ async function stepMachine(a: StepArgs) {
         return;
       }
 
+      const priceRange = extractPriceRange(t);
       const query = slots.productCode ?? searchCandidate;
-      const products = await erpSearchProducts(erpConfig, query, 5);
+      let products = await erpSearchProducts(erpConfig, query, 10);
+
+      if (priceRange) {
+        products = products.filter((p) => {
+          if (priceRange.max !== undefined && p.price > priceRange.max) return false;
+          if (priceRange.min !== undefined && p.price < priceRange.min) return false;
+          return true;
+        });
+      }
+
+      if (!products.length && query.length >= 3) {
+        // Fuzzy fallback: try with first 3 chars prefix to be tolerant to typos
+        const stem = query.slice(0, Math.max(3, query.length - 2));
+        products = await erpSearchProducts(erpConfig, stem, 10);
+        if (priceRange) {
+          products = products.filter((p) => {
+            if (priceRange.max !== undefined && p.price > priceRange.max) return false;
+            if (priceRange.min !== undefined && p.price < priceRange.min) return false;
+            return true;
+          });
+        }
+      }
+
       if (!products.length) {
-        await botSay(token, psid, convId, 'Уучлаарай, бүтээгдэхүүн олдсонгүй. Дахин оролдоно уу.');
+        ctx.misunderstandCount = (ctx.misunderstandCount ?? 0) + 1;
+        if (ctx.misunderstandCount >= MAX_MISUNDERSTAND) {
+          await handoffToOperator(token, psid, convId, 'no_product_found');
+          return;
+        }
+        await botSay(token, psid, convId, 'Уучлаарай, бүтээгдэхүүн олдсонгүй. Дахин оролдоно уу, эсвэл "оператор" гэж бичнэ үү.');
         await updateState(convId, 'PRODUCT', ctx, cart);
         return;
       }
+      ctx.misunderstandCount = 0;
+      products = products.slice(0, 5);
       if (products.length === 1) {
         ctx.selectedProduct = products[0];
+        await sendProductGallery(token, psid, convId, products[0]);
         if (slots.quantity) {
           ctx.quantity = slots.quantity;
           if (!cart.find((c) => c.product.id === products[0].id)) {
@@ -451,21 +648,29 @@ async function submitOrder(page: any, erpConfig: ErpConfigShape | null, convId: 
   }));
 
   let erpResult: any = {};
+  let lastError: string | undefined;
+  let attempts = 0;
   if (erpConfig) {
-    erpResult = await erpCreateOrder(erpConfig, {
-      customerPhone: ctx.phone!,
-      extraPhone: ctx.extraPhone,
-      address: ctx.address!,
-      district: ctx.district,
-      province: ctx.province!,
-      shopSource: `Facebook - ${page.pageName}`,
-      products,
-      operatorNote: 'Facebook chatbot захиалга',
-      chatbotOrderId: convId,
-    });
+    for (attempts = 1; attempts <= 3; attempts++) {
+      erpResult = await erpCreateOrder(erpConfig, {
+        customerPhone: ctx.phone!,
+        extraPhone: ctx.extraPhone,
+        address: ctx.address!,
+        district: ctx.district,
+        province: ctx.province!,
+        shopSource: `Facebook - ${page.pageName}`,
+        products,
+        operatorNote: 'Facebook chatbot захиалга',
+        chatbotOrderId: convId,
+      });
+      if (!erpResult.error) break;
+      lastError = typeof erpResult.error === 'string' ? erpResult.error : JSON.stringify(erpResult.error);
+      if (attempts < 3) await new Promise((r) => setTimeout(r, 500 * attempts));
+    }
   }
 
-  await prisma.order.create({
+  const failed = !erpConfig || !!erpResult.error;
+  const order = await prisma.order.create({
     data: {
       conversationId: convId,
       erpConfigId: page.erpConfigId,
@@ -479,14 +684,24 @@ async function submitOrder(page: any, erpConfig: ErpConfigShape | null, convId: 
       note: ctx.note,
       products: products as any,
       totalAmount: total,
-      status: erpResult.error ? 'failed' : 'pending',
+      status: failed ? 'failed' : 'pending',
+      retryCount: Math.max(0, attempts - 1),
+      lastRetryAt: attempts > 1 ? new Date() : null,
+      lastError: failed ? lastError ?? null : null,
     },
   });
+  await logAudit({ entityType: 'order', entityId: order.id, action: failed ? 'create_failed' : 'created', actorRole: 'bot', meta: { attempts, total } });
 
-  if (erpResult.error) {
+  if (await checkAndFlagSpam(page.pageId, psid, convId)) {
+    await botSay(page.accessToken, psid, convId, 'Таны захиалга операторт шилжүүллээ. Баярлалаа.');
+    await prisma.conversation.update({ where: { id: convId }, data: { isOperatorHandoff: true, handoffReason: 'spam' } });
+    return;
+  }
+
+  if (failed) {
     await botSay(page.accessToken, psid, convId,
       'Түр зуурын саатал гарлаа. Оператортой холбогдоно уу.');
-    await prisma.conversation.update({ where: { id: convId }, data: { isOperatorHandoff: true } });
+    await prisma.conversation.update({ where: { id: convId }, data: { isOperatorHandoff: true, handoffReason: 'erp_failed' } });
     return;
   }
 
@@ -494,7 +709,8 @@ async function submitOrder(page: any, erpConfig: ErpConfigShape | null, convId: 
   const loc = [ctx.province, ctx.district, ctx.address].filter(Boolean).join(', ');
   const itemList = cart.map((c) => `${c.product.name} x ${c.quantity}ш`).join(', ');
   await botSay(page.accessToken, psid, convId,
-    `Таны захиалга амжилттай бүртгэгдлээ!\n${itemList}\n${loc}-д ${when} хүргэнэ\nУдахгүй манай оператор тантай холбогдох болно. Баярлалаа!`);
+    `Таны захиалга амжилттай бүртгэгдлээ!\n${itemList}\n${loc}-д ${when} хүргэнэ\nУдахгүй манай оператор тантай холбогдох болно. Баярлалаа!`,
+    ['Захиалга хянах']);
   await updateState(convId, 'DONE', {}, []);
 }
 

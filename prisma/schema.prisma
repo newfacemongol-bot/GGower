@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ErpConfig {
+  id          String   @id @default(cuid())
+  name        String
+  apiUrl      String
+  apiKey      String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pages  FacebookPage[]
+  orders Order[]
+}
+
+model FacebookPage {
+  id                  String   @id @default(cuid())
+  pageId              String   @unique
+  pageName            String
+  accessToken         String
+  isActive            Boolean  @default(true)
+  autoReplyEnabled    Boolean  @default(true)
+  hourlyCommentLimit  Int      @default(60)
+  reactionEnabled     Boolean  @default(false)
+  erpConfigId         String?
+  erpConfig           ErpConfig? @relation(fields: [erpConfigId], references: [id])
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  conversations Conversation[]
+  comments      CommentLead[]
+}
+
+model Conversation {
+  id                 String   @id @default(cuid())
+  pageId             String
+  psid               String
+  state              String   @default("IDLE")
+  context            Json     @default("{}")
+  cart               Json     @default("[]")
+  isOperatorHandoff  Boolean  @default(false)
+  operatorId         String?
+  senderName         String?
+  lastMessageAt      DateTime @default(now())
+  status             String   @default("active")
+  unreadCount        Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  page     FacebookPage @relation(fields: [pageId], references: [pageId], onDelete: Cascade)
+  messages Message[]
+  orders   Order[]
+
+  @@unique([pageId, psid])
+  @@index([lastMessageAt])
+  @@index([status])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  text           String
+  isFromBot      Boolean  @default(false)
+  isFromOperator Boolean  @default(false)
+  timestamp      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, timestamp])
+}
+
+model CommentLead {
+  id             String    @id @default(cuid())
+  commentId      String    @unique
+  postId         String
+  pageId         String
+  senderName     String?
+  senderFbId     String
+  commentText    String
+  intent         String?
+  extractedPhone String?
+  productCode    String?
+  replied        Boolean   @default(false)
+  repliedAt      DateTime?
+  replyText      String?
+  queuedAt       DateTime  @default(now())
+  sentAt         DateTime?
+  scheduledFor   DateTime?
+  status         String    @default("queued")
+  createdAt      DateTime  @default(now())
+
+  page FacebookPage @relation(fields: [pageId], references: [pageId], onDelete: Cascade)
+
+  @@index([status, scheduledFor])
+  @@index([pageId, senderFbId])
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  conversationId  String?
+  erpConfigId     String?
+  erpOrderId      String?
+  erpOrderNumber  String?
+  customerPhone   String
+  extraPhone      String?
+  customerName    String?
+  province        String
+  district        String?
+  address         String
+  note            String?
+  products        Json
+  totalAmount     Int      @default(0)
+  status          String   @default("pending")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
+  erpConfig    ErpConfig?    @relation(fields: [erpConfigId], references: [id])
+
+  @@index([customerPhone])
+  @@index([status])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model CommentReply {
+  id        String   @id @default(cuid())
+  text      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  role      String   @default("admin")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+}

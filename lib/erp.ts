@@ -165,7 +165,16 @@ export async function erpCreateOrder(
         "products",
         "history",
         "chatbotOrderId",
-        "orderTotal"
+        "orderTotal",
+        "isPaidToDriver",
+        "goodsReturned",
+        "driverSalary",
+        "rescheduleCount",
+        "prepaid",
+        "customOrder",
+        "excludedFromPerformance",
+        "cancelledProductsReturnedToWarehouse",
+        "rescheduledProductsReturnedToWarehouse"
       ) VALUES (
         ${orderNumber},
         ${customerName},
@@ -181,7 +190,16 @@ export async function erpCreateOrder(
         ${JSON.stringify(productsJson)}::jsonb,
         ${JSON.stringify(historyJson)}::jsonb,
         ${input.chatbotOrderId ?? null},
-        ${orderTotal}
+        ${orderTotal},
+        ${true},
+        ${0},
+        ${0},
+        ${0},
+        ${false},
+        ${false},
+        ${false},
+        ${false},
+        ${false}
       )
       RETURNING id, "orderNumber", status::text AS status
     `;

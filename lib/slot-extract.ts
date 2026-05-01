@@ -15,12 +15,46 @@ export interface ExtractedSlots {
 const DIGIT_RE = /\d+/g;
 const PRODUCT_PREFIX_RE = /([pPcCрРсС])[-]?(\d{1,5})/g;
 
+const RESET_KEYWORDS = [
+  'шинэ захиалга',
+  'шинэ',
+  'дахин',
+  'restart',
+  'эхлэх',
+  'цэс',
+  'menu',
+  'start',
+  'hi',
+  'hello',
+  'сайн байна уу',
+  'сайн уу',
+  'баярлалаа',
+];
+
+function isResetKeyword(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  if (!t) return false;
+  return RESET_KEYWORDS.some((k) => t === k || t === k + '.' || t === k + '!');
+}
+
+function stripResetKeywords(text: string): string {
+  let out = text;
+  for (const k of RESET_KEYWORDS) {
+    out = out.replace(new RegExp('\\b' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), ' ');
+  }
+  return out.replace(/\s+/g, ' ').trim();
+}
+
 function padCode(num: string): string {
   return num.padStart(4, '0');
 }
 
 export function extractSlots(text: string, opts: { productSelected: boolean; wantPhone: boolean }): ExtractedSlots {
   const result: ExtractedSlots = { remainingText: text };
+  if (isResetKeyword(text)) {
+    result.remainingText = '';
+    return result;
+  }
   let working = text;
   const normalized = latinToCyrillic(working);
 
@@ -101,6 +135,7 @@ export function extractSlots(text: string, opts: { productSelected: boolean; wan
     remaining = remaining.replace(new RegExp('\\b' + plain + '\\b', 'g'), ' ');
     remaining = remaining.replace(new RegExp('\\b' + parseInt(plain, 10) + '\\b', 'g'), ' ');
   }
+  remaining = stripResetKeywords(remaining);
   remaining = remaining.replace(/\s+/g, ' ').trim();
   const hasAddressMarkers = /(хороо|тоот|байр|орц|давхар|гудамж|хотхон|хашаа|street|apt|building)/i.test(remaining);
   const wordCount = remaining.split(/\s+/).filter(Boolean).length;

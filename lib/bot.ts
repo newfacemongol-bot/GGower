@@ -8,6 +8,7 @@ import { extractSlots } from './slot-extract';
 import { getDeliveryMessage, isBotEnabled, isNightMode } from './settings';
 import { extractPriceRange } from './fuzzy';
 import { logAudit } from './audit';
+import { getBotMessage } from './bot-messages';
 
 const SPAM_ORDER_THRESHOLD = 5;
 const SPAM_WINDOW_HOURS = 24;
@@ -183,7 +184,7 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
       page.accessToken,
       psid,
       conv.id,
-      'Сайн байна уу! Шинэ захиалга өгөхийг хүсвэл бараа код эсвэл нэрийг бичнэ үү.',
+      await getBotMessage('welcome'),
     );
     await updateState(conv.id, 'IDLE', {}, []);
     return;
@@ -219,36 +220,36 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
   await stepMachine({ page, erpConfig, convId: conv.id, psid, state, ctx, cart, text });
 }
 
-function nextMissingPrompt(ctx: Ctx, cart: CartItem[]): { state: State; ask: string; quickReplies?: string[] } | null {
+async function nextMissingPrompt(ctx: Ctx, cart: CartItem[]): Promise<{ state: State; ask: string; quickReplies?: string[] } | null> {
   if (!ctx.selectedProduct && cart.length === 0) {
     return { state: 'PRODUCT', ask: 'Ямар бүтээгдэхүүн захиалах вэ? Код эсвэл нэрийг бичнэ үү.' };
   }
   if (!ctx.quantity) {
-    return { state: 'QUANTITY', ask: 'Хэдэн ширхэг авах вэ?', quickReplies: ['1', '2', '3', 'Өөр тоо'] };
+    return { state: 'QUANTITY', ask: await getBotMessage('ask_quantity'), quickReplies: ['1', '2', '3', 'Өөр тоо'] };
   }
   if (!ctx.phone) {
-    return { state: 'PHONE', ask: 'Холбоо барих утасны дугаараа оруулна уу:' };
+    return { state: 'PHONE', ask: await getBotMessage('ask_phone') };
   }
   if (ctx.extraPhone === undefined && !ctx.extraPhoneAsked) {
-    return { state: 'EXTRA_PHONE', ask: 'Нэмэлт утасны дугаар байна уу?', quickReplies: ['Байхгүй'] };
+    return { state: 'EXTRA_PHONE', ask: await getBotMessage('ask_extra_phone'), quickReplies: ['Байхгүй'] };
   }
   if (!ctx.province) {
-    return { state: 'PROVINCE', ask: 'Хүргэлт хаашаа вэ?', quickReplies: PROVINCES.slice(0, 12) };
+    return { state: 'PROVINCE', ask: await getBotMessage('ask_province'), quickReplies: PROVINCES.slice(0, 12) };
   }
   if (isUB(ctx.province) && !ctx.district) {
-    return { state: 'DISTRICT', ask: 'Аль дүүрэгт хүргэх вэ?', quickReplies: UB_DISTRICTS };
+    return { state: 'DISTRICT', ask: await getBotMessage('ask_district'), quickReplies: UB_DISTRICTS };
   }
   if (!ctx.address) {
-    return { state: 'ADDRESS', ask: 'Дэлгэрэнгүй хаягаа бичнэ үү:\n(Хороо, байр, тоот, орц, давхар)' };
+    return { state: 'ADDRESS', ask: await getBotMessage('ask_address') };
   }
   if (ctx.note === undefined) {
-    return { state: 'NOTE', ask: 'Нэмэлт тэмдэглэл байна уу?', quickReplies: ['Байхгүй'] };
+    return { state: 'NOTE', ask: await getBotMessage('ask_note'), quickReplies: ['Байхгүй'] };
   }
   return null;
 }
 
 async function advanceToNextMissing(token: string, psid: string, convId: string, ctx: Ctx, cart: CartItem[]) {
-  const next = nextMissingPrompt(ctx, cart);
+  const next = await nextMissingPrompt(ctx, cart);
   if (!next) {
     const summary = buildSummary(cart, ctx);
     await botSay(token, psid, convId, summary, ['Тийм', 'Болих']);
@@ -279,7 +280,7 @@ async function handoffToOperator(token: string, psid: string, convId: string, re
     where: { id: convId },
     data: { isOperatorHandoff: true, handoffReason: reason, lastMessageAt: new Date(), unreadCount: { increment: 1 } },
   });
-  await botSay(token, psid, convId, 'Таныг оператортой холбож байна. Түр хүлээнэ үү.');
+  await botSay(token, psid, convId, await getBotMessage('operator_handoff'));
   await logAudit({ entityType: 'conversation', entityId: convId, action: 'handoff', actorRole: 'bot', meta: { reason } });
 }
 
@@ -353,14 +354,13 @@ async function enterProductDetected(
   const results = await erpSearchProducts(erpConfig, code, 1);
   const product = results[0];
   if (!product) {
-    await botSay(page.accessToken, psid, convId,
-      'Уучлаарай, бүтээгдэхүүн олдсонгүй. Дахин оролдоно уу.');
+    await botSay(page.accessToken, psid, convId, await getBotMessage('product_not_found'));
     await updateState(convId, 'IDLE', ctx);
     return;
   }
   ctx.selectedProduct = product;
   await botSay(page.accessToken, psid, convId,
-    `${product.name}\nҮнэ: ${product.price.toLocaleString()}₮\nХэдэн ширхэг авах вэ?`,
+    `${product.name}\nҮнэ: ${product.price.toLocaleString()}₮\n${await getBotMessage('ask_quantity')}`,
     ['1', '2', '3', 'Өөр тоо']);
   await updateState(convId, 'QUANTITY', ctx);
 }
@@ -476,7 +476,7 @@ async function stepMachine(a: StepArgs) {
           await handoffToOperator(token, psid, convId, 'no_product_found');
           return;
         }
-        await botSay(token, psid, convId, 'Уучлаарай, бүтээгдэхүүн олдсонгүй. Дахин оролдоно уу, эсвэл "оператор" гэж бичнэ үү.');
+        await botSay(token, psid, convId, await getBotMessage('product_not_found'));
         await updateState(convId, 'PRODUCT', ctx, cart);
         return;
       }
@@ -496,7 +496,7 @@ async function stepMachine(a: StepArgs) {
           return;
         }
         await botSay(token, psid, convId,
-          `${products[0].name}\nҮнэ: ${products[0].price.toLocaleString()}₮\nХэдэн ширхэг авах вэ?`,
+          `${products[0].name}\nҮнэ: ${products[0].price.toLocaleString()}₮\n${await getBotMessage('ask_quantity')}`,
           ['1', '2', '3', 'Өөр тоо']);
         await updateState(convId, 'QUANTITY', ctx, cart);
         return;
@@ -625,8 +625,7 @@ async function stepMachine(a: StepArgs) {
           return;
         }
       }
-      await botSay(token, psid, convId,
-        'Сайн байна уу! Би захиалга авах бот байна. Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.');
+      await botSay(token, psid, convId, await getBotMessage('welcome'));
       await updateState(convId, 'PRODUCT', {}, []);
     }
   }
@@ -711,8 +710,7 @@ async function submitOrder(page: any, erpConfig: ErpConfigShape | null, convId: 
   }
 
   if (failed) {
-    await botSay(page.accessToken, psid, convId,
-      'Түр зуурын саатал гарлаа. Оператортой холбогдоно уу.');
+    await botSay(page.accessToken, psid, convId, await getBotMessage('order_fail'));
     await prisma.conversation.update({ where: { id: convId }, data: { isOperatorHandoff: true, handoffReason: 'erp_failed' } });
     return;
   }
@@ -721,7 +719,7 @@ async function submitOrder(page: any, erpConfig: ErpConfigShape | null, convId: 
   const loc = [ctx.province, ctx.district, ctx.address].filter(Boolean).join(', ');
   const itemList = cart.map((c) => `${c.product.name} x ${c.quantity}ш`).join(', ');
   await botSay(page.accessToken, psid, convId,
-    `Таны захиалга амжилттай бүртгэгдлээ!\n${itemList}\n${loc}-д ${when} хүргэнэ\nУдахгүй манай оператор тантай холбогдох болно. Баярлалаа!`,
+    `${await getBotMessage('order_success')}\n${itemList}\n${loc}-д ${when} хүргэнэ`,
     ['Шинэ захиалга', 'Захиалга хянах']);
   await updateState(convId, 'DONE', {}, []);
 }

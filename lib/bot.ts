@@ -177,6 +177,17 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
     await updateState(conv.id, 'PRODUCT', nextCtx, cart);
     return;
   }
+
+  if (state === 'DONE') {
+    await botSay(
+      page.accessToken,
+      psid,
+      conv.id,
+      'Сайн байна уу! Шинэ захиалга өгөхийг хүсвэл бараа код эсвэл нэрийг бичнэ үү.',
+    );
+    await updateState(conv.id, 'IDLE', {}, []);
+    return;
+  }
   const erpConfig: ErpConfigShape | null = page.erpConfig
     ? { apiUrl: page.erpConfig.apiUrl, apiKey: page.erpConfig.apiKey }
     : null;
@@ -187,7 +198,7 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
     return;
   }
 
-  if (state !== 'IDLE' && state !== 'PRODUCT' && state !== 'CONFIRM' && state !== 'DONE') {
+  if (state !== 'IDLE' && state !== 'PRODUCT' && state !== 'CONFIRM') {
     const slots = extractSlots(text, {
       productSelected: !!ctx.selectedProduct || cart.length > 0,
       wantPhone: state === 'PHONE',
@@ -711,7 +722,7 @@ async function submitOrder(page: any, erpConfig: ErpConfigShape | null, convId: 
   const itemList = cart.map((c) => `${c.product.name} x ${c.quantity}ш`).join(', ');
   await botSay(page.accessToken, psid, convId,
     `Таны захиалга амжилттай бүртгэгдлээ!\n${itemList}\n${loc}-д ${when} хүргэнэ\nУдахгүй манай оператор тантай холбогдох болно. Баярлалаа!`,
-    ['Захиалга хянах']);
+    ['Шинэ захиалга', 'Захиалга хянах']);
   await updateState(convId, 'DONE', {}, []);
 }
 

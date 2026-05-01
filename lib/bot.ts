@@ -351,6 +351,7 @@ async function submitOrder(page: any, erpConfig: ErpConfigShape | null, convId: 
       shopSource: `Facebook - ${page.pageName}`,
       products,
       operatorNote: 'Facebook chatbot захиалга',
+      chatbotOrderId: convId,
     });
   }
 

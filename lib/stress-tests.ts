@@ -334,9 +334,15 @@ export async function* runAllTests(): AsyncGenerator<TestResult> {
       a('not handoff', false, r.handoff, r.handoff === false);
     });
     yield await runOne('T5.10', cat5, 'Misunderstand -> handoff', async (a) => {
-      const r = await simulate('stress-test-T5.10', ['sdfghjkl', 'qwerty123', '????'], pageId);
-      const ok = r.handoff || (r.misunderstandCount ?? 0) >= 2;
-      a('handoff or >=2 misunderstand', true, { handoff: r.handoff, count: r.misunderstandCount }, ok);
+      await simulate('stress-test-T5.10', ['sdfghjkl', 'qwerty123', '????'], pageId);
+      const final = await prisma.conversation.findUnique({
+        where: { pageId_psid: { pageId, psid: 'stress-test-T5.10' } },
+        select: { misunderstandCount: true, isOperatorHandoff: true },
+      });
+      const count = final?.misunderstandCount ?? 0;
+      const handoff = final?.isOperatorHandoff ?? false;
+      const ok = handoff || count >= 2;
+      a('handoff or >=2 misunderstand', true, { handoff, count }, ok);
     });
 
     // ============ CATEGORY 6: RATE LIMITING ============
@@ -428,3 +434,5 @@ export async function cleanupStressTestData(): Promise<{ conversations: number; 
     orders: orders.count,
   };
 }
+
+export { cleanupStressTestData }

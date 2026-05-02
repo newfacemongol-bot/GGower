@@ -600,6 +600,10 @@ async function stepMachine(a: StepArgs) {
 
       if (!products.length) {
         ctx.misunderstandCount = (ctx.misunderstandCount ?? 0) + 1;
+        await prisma.conversation.update({
+          where: { id: convId },
+          data: { misunderstandCount: ctx.misunderstandCount, context: ctx as any },
+        });
         if (ctx.misunderstandCount >= MAX_MISUNDERSTAND) {
           await handoffToOperator(token, psid, convId, 'no_product_found');
           return;

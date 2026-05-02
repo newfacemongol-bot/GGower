@@ -12,6 +12,7 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 const REMINDER_1_DELAY_MS = 1 * ONE_HOUR_MS;
 const REMINDER_23_DELAY_MS = 23 * ONE_HOUR_MS;
 const FACEBOOK_WINDOW_MS = 24 * ONE_HOUR_MS;
+const FACEBOOK_SAFE_CUTOFF_MS = 23.5 * ONE_HOUR_MS;
 const PHONE_FOLLOWUP_DELAY_MS = 30 * 60 * 1000;
 const INTENT_FOLLOWUP_DELAY_MS = 60 * 60 * 1000;
 const MAX_ORDER_RETRY = 3;
@@ -236,7 +237,7 @@ async function processReminders() {
 
     if (!conv.page?.isActive || !conv.page?.accessToken) continue;
 
-    if (age >= REMINDER_23_DELAY_MS && !conv.reminder23SentAt && age < FACEBOOK_WINDOW_MS) {
+    if (age >= REMINDER_23_DELAY_MS && !conv.reminder23SentAt && age < FACEBOOK_SAFE_CUTOFF_MS) {
       const ok = await sendText(
         conv.page.accessToken,
         conv.psid,
@@ -293,7 +294,7 @@ async function processAbandonedFollowups() {
   const now = Date.now();
   const cutoffPhone = new Date(now - PHONE_FOLLOWUP_DELAY_MS);
   const cutoffIntent = new Date(now - INTENT_FOLLOWUP_DELAY_MS);
-  const windowCutoff = new Date(now - FACEBOOK_WINDOW_MS);
+  const windowCutoff = new Date(now - FACEBOOK_SAFE_CUTOFF_MS);
 
   const phoneStuck = await prisma.conversation.findMany({
     where: {

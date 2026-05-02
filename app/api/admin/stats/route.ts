@@ -10,7 +10,13 @@ export async function GET() {
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
-  const last5min = new Date(Date.now() - 5 * 60 * 1000);
+  const nowMs = Date.now();
+  const last5min = new Date(nowMs - 5 * 60 * 1000);
+  const windowOpenSince = new Date(nowMs - 24 * 60 * 60 * 1000);
+  const closeIn2hStart = new Date(nowMs - 24 * 60 * 60 * 1000);
+  const closeIn2hEnd = new Date(nowMs - 22 * 60 * 60 * 1000);
+  const closeIn30mStart = new Date(nowMs - 24 * 60 * 60 * 1000);
+  const closeIn30mEnd = new Date(nowMs - 23.5 * 60 * 60 * 1000);
 
   const [
     todayOrders,
@@ -28,6 +34,9 @@ export async function GET() {
     spamBlocked,
     complaintCount,
     urgentCount,
+    windowClosingIn2h,
+    windowClosingIn30m,
+    windowExpired,
   ] = await Promise.all([
     prisma.order.count({ where: { createdAt: { gte: startOfDay } } }),
     prisma.order.count({ where: { createdAt: { gte: startOfDay }, status: 'failed' } }),
@@ -48,6 +57,24 @@ export async function GET() {
     prisma.spamBlock.count(),
     prisma.conversation.count({ where: { sentiment: 'complaint', status: 'active' } }),
     prisma.conversation.count({ where: { sentiment: 'urgent', status: 'active' } }),
+    prisma.conversation.count({
+      where: {
+        status: 'active',
+        lastMessageAt: { gte: closeIn2hStart, lt: closeIn2hEnd },
+      },
+    }),
+    prisma.conversation.count({
+      where: {
+        status: 'active',
+        lastMessageAt: { gte: closeIn30mStart, lt: closeIn30mEnd },
+      },
+    }),
+    prisma.conversation.count({
+      where: {
+        status: 'active',
+        lastMessageAt: { lt: windowOpenSince },
+      },
+    }),
   ]);
 
   const conversionRate = todayConvs > 0 ? Math.round((todayCompletedOrders / todayConvs) * 1000) / 10 : 0;
@@ -66,6 +93,9 @@ export async function GET() {
     complaintCount,
     urgentCount,
     conversionRate,
+    windowClosingIn2h,
+    windowClosingIn30m,
+    windowExpired,
     todayConvs,
     todayCompletedOrders,
     pages: pages.map((p) => ({

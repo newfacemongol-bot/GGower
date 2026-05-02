@@ -30,6 +30,9 @@ interface Stats {
   conversionRate: number;
   todayConvs: number;
   todayCompletedOrders: number;
+  windowClosingIn2h: number;
+  windowClosingIn30m: number;
+  windowExpired: number;
   pages: { pageId: string; pageName: string; comments: number; conversations: number }[];
 }
 
@@ -87,6 +90,27 @@ export default function Dashboard() {
           value={stats?.complaintCount ?? 0}
           icon={<ShieldAlert className="w-5 h-5" />}
           accent={stats && stats.complaintCount > 0 ? 'amber' : undefined}
+        />
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4 mb-4">
+        <Stat
+          label="2 цаг дотор хаагдах"
+          value={stats?.windowClosingIn2h ?? 0}
+          icon={<Clock className="w-5 h-5" />}
+          accent={stats && stats.windowClosingIn2h > 0 ? 'amber' : undefined}
+        />
+        <Stat
+          label="30 минут дотор хаагдах"
+          value={stats?.windowClosingIn30m ?? 0}
+          icon={<TriangleAlert className="w-5 h-5" />}
+          accent={stats && stats.windowClosingIn30m > 0 ? 'rose' : undefined}
+        />
+        <Stat
+          label="24 цаг хэтэрсэн"
+          value={stats?.windowExpired ?? 0}
+          icon={<ShieldAlert className="w-5 h-5" />}
+          accent={stats && stats.windowExpired > 0 ? 'rose' : undefined}
         />
       </div>
 

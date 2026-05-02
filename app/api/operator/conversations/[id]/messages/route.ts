@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { sendText } from '@/lib/facebook';
+import { isWindowClosed, msRemaining } from '@/lib/fb-window';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   });
   if (!conv) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+  if (isWindowClosed(conv.lastMessageAt)) {
+    return NextResponse.json(
+      {
+        error: 'WINDOW_EXPIRED',
+        message: '24 цагийн цонх хэтэрсэн байна. Meta Business Suite-р орж бичнэ үү.',
+        remainingMs: 0,
+      },
+      { status: 403 },
+    );
+  }
+
   await sendText(conv.page.accessToken, conv.psid, text);
   const msg = await prisma.message.create({
     data: { conversationId: conv.id, text, isFromOperator: true },
@@ -26,5 +38,5 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     where: { id: conv.id },
     data: { isOperatorHandoff: true, lastMessageAt: new Date() },
   });
-  return NextResponse.json({ message: msg });
+  return NextResponse.json({ message: msg, remainingMs: msRemaining(conv.lastMessageAt) });
 }

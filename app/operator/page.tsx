@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert, Phone, X, EyeOff, Eye, Trash2, MapPin, Package, Hash, Wallet, NotebookPen, Home, Globe2, AlertTriangle } from 'lucide-react';
+import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert, Phone, X, EyeOff, Eye, Trash2, MapPin, Package, Hash, Wallet, NotebookPen, Chrome as Home, Globe as Globe2, TriangleAlert as AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -60,6 +60,29 @@ function relativeTime(d: string | Date): string {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h} цаг өмнө`;
   return `${Math.floor(h / 24)} өдөр өмнө`;
+}
+
+const FB_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function msLeftInWindow(lastMessageAt: string | Date | null | undefined, nowMs: number = Date.now()): number {
+  if (!lastMessageAt) return 0;
+  const last = new Date(lastMessageAt).getTime();
+  return Math.max(0, FB_WINDOW_MS - (nowMs - last));
+}
+
+function fmtCountdown(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function windowTone(ms: number): 'safe' | 'warn' | 'critical' | 'expired' {
+  if (ms <= 0) return 'expired';
+  if (ms < 30 * 60 * 1000) return 'critical';
+  if (ms < 60 * 60 * 1000) return 'warn';
+  return 'safe';
 }
 
 function isSilent(c: ConvItem): boolean {
@@ -187,9 +210,16 @@ export default function OperatorPage() {
   async function send() {
     if (!text.trim() || !activeId) return;
     const msg = text; setText('');
-    await fetch(`/api/operator/conversations/${activeId}/messages`, {
+    const res = await fetch(`/api/operator/conversations/${activeId}/messages`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: msg }),
     });
+    if (res.status === 403) {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.message || '24 цагийн цонх хэтэрсэн байна.');
+      setText(msg);
+      loadConv(activeId);
+      return;
+    }
     loadConv(activeId);
   }
 
@@ -368,7 +398,10 @@ export default function OperatorPage() {
                   <div className="text-xs text-slate-500 truncate">
                     {(c.lastMessage || '—').slice(0, 40)}
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">{relativeTime(c.lastMessageAt)}</div>
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <div className="text-[11px] text-slate-400">{relativeTime(c.lastMessageAt)}</div>
+                    <WindowPill lastMessageAt={c.lastMessageAt} now={now} />
+                  </div>
 
                   {isOrderedTab && c.order && (
                     <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1.5 text-xs space-y-0.5">
@@ -483,6 +516,7 @@ export default function OperatorPage() {
               ))}
               <div ref={endRef} />
             </div>
+            <WindowBanner lastMessageAt={conv.lastMessageAt} now={now} />
             <footer className="bg-white border-t border-slate-200 p-4 relative">
               {showTemplates && (
                 <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-72 overflow-auto">
@@ -506,21 +540,33 @@ export default function OperatorPage() {
                   ))}
                 </div>
               )}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowTemplates((v) => !v)}
-                  className="px-3 border border-slate-300 rounded-lg hover:bg-slate-50"
-                  title="Template"
-                >
-                  <FileText className="w-4 h-4" />
-                </button>
-                <input value={text} onChange={(e) => setText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && send()}
-                  placeholder="Мессеж бичих..." className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900" />
-                <button onClick={send} className="bg-slate-900 text-white px-4 rounded-lg hover:bg-slate-800">
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
+              {(() => {
+                const expired = msLeftInWindow(conv.lastMessageAt, now) <= 0;
+                return (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowTemplates((v) => !v)}
+                      disabled={expired}
+                      className="px-3 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Template"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </button>
+                    <input value={text} onChange={(e) => setText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && send()}
+                      disabled={expired}
+                      placeholder={expired ? '24 цагийн цонх хаагдсан — мессеж илгээх боломжгүй' : 'Мессеж бичих...'}
+                      className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
+                    <button
+                      onClick={send}
+                      disabled={expired}
+                      className="bg-slate-900 text-white px-4 rounded-lg hover:bg-slate-800 disabled:bg-slate-400 disabled:cursor-not-allowed"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })()}
             </footer>
             </div>
             <CustomerInfoPanel
@@ -633,6 +679,76 @@ export default function OperatorPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function WindowPill({ lastMessageAt, now }: { lastMessageAt: string | Date; now: number }) {
+  const left = msLeftInWindow(lastMessageAt, now);
+  const tone = windowTone(left);
+  if (tone === 'expired') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">
+        Хэтэрсэн
+      </span>
+    );
+  }
+  const totalMin = Math.floor(left / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  const txt = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} үлдлээ`;
+  const cls =
+    tone === 'critical'
+      ? 'bg-red-100 text-red-700'
+      : tone === 'warn'
+        ? 'bg-amber-100 text-amber-800'
+        : 'bg-emerald-50 text-emerald-700';
+  return <span className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded font-medium ${cls}`}>{txt}</span>;
+}
+
+function WindowBanner({ lastMessageAt, now }: { lastMessageAt: string | Date; now: number }) {
+  const left = msLeftInWindow(lastMessageAt, now);
+  const tone = windowTone(left);
+  if (tone === 'expired') {
+    return (
+      <div className="bg-slate-900 text-white px-6 py-3 flex items-start gap-3 border-t border-slate-800">
+        <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <div className="font-semibold">24 цаг хэтэрсэн — мессеж илгээх боломжгүй</div>
+          <div className="text-slate-300 mt-0.5">
+            Meta Business Suite-р орж бичнэ үү:{' '}
+            <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" className="underline text-white">
+              business.facebook.com
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  const countdown = fmtCountdown(left);
+  if (tone === 'critical') {
+    return (
+      <div className="bg-red-50 border-t border-red-200 px-6 py-2 flex items-center gap-2 text-sm text-red-800">
+        <AlertTriangle className="w-4 h-4 shrink-0" />
+        <span className="font-semibold">30 минутаас бага үлдлээ!</span>
+        <span className="ml-auto font-mono text-red-900">{countdown}</span>
+      </div>
+    );
+  }
+  if (tone === 'warn') {
+    return (
+      <div className="bg-amber-50 border-t border-amber-200 px-6 py-2 flex items-center gap-2 text-sm text-amber-900">
+        <AlertTriangle className="w-4 h-4 shrink-0" />
+        <span className="font-semibold">1 цаг үлдлээ — яаравчлаарай</span>
+        <span className="ml-auto font-mono">{countdown}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-emerald-50 border-t border-emerald-100 px-6 py-1.5 flex items-center gap-2 text-xs text-emerald-800">
+      <span>Цонх хаагдахад</span>
+      <span className="font-mono font-semibold">{countdown}</span>
+      <span>үлдлээ</span>
     </div>
   );
 }

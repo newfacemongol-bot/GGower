@@ -11,10 +11,10 @@ export default function LogoutButton() {
         await fetch('/api/auth/logout', { method: 'POST' });
         router.push('/');
       }}
-      className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
+      className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
     >
-      <LogOut className="w-4 h-4" />
-      Гарах / Log out
+      <LogOut className="w-4 h-4 text-slate-400" />
+      <span className="font-medium">Log out</span>
     </button>
   );
 }

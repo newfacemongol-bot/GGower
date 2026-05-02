@@ -18,8 +18,8 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
   }
 
   const links = [
-    { href: '/operator', label: 'Чат', icon: MessageSquare },
-    { href: '/operator/comments', label: 'Коммент', icon: MessagesSquare },
+    { href: '/operator', label: 'Чат / Chat', icon: MessageSquare },
+    { href: '/operator/comments', label: 'Коммент / Comments', icon: MessagesSquare },
   ];
 
   return (
@@ -44,7 +44,7 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
         <div className="flex-1" />
         <button
           onClick={logout}
-          title="Гарах"
+          title="Гарах / Log out"
           className="w-11 h-11 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition"
         >
           <LogOut className="w-5 h-5" />

@@ -53,9 +53,9 @@ export default function StressTestPage() {
     else if (dangerCount > 0) fbRisk = 'ӨНДӨР';
     else if (cautionCount > 1) fbRisk = 'ДУНД';
     const canHandle = fail === 0;
-    let recommendation = 'Систем өдөрт 30,810 мессеж боловсруулах чадвартай.';
-    if (fail > 0) recommendation = 'Систем бүрэн ачааллыг даахгүй. Гүйцэтгэлийг сайжруулна уу.';
-    else if (percent < 100) recommendation = 'Анхааруулгатай тестүүдийг шалгана уу.';
+    let recommendation = 'Систем өдөрт 30,810 мессеж боловсруулах чадвартай. / System can process 30,810 messages/day.';
+    if (fail > 0) recommendation = 'Систем бүрэн ачааллыг даахгүй. Гүйцэтгэлийг сайжруулна уу. / System cannot handle full load. Please improve performance.';
+    else if (percent < 100) recommendation = 'Анхааруулгатай тестүүдийг шалгана уу. / Please check tests with warnings.';
     return { pass, fail, percent, fbRisk, recommendation, canHandle };
   }, [loadResults]);
 
@@ -114,7 +114,7 @@ export default function StressTestPage() {
   }
 
   async function cleanup() {
-    if (!confirm('Тест өгөгдлийг бүгдийг устгах уу? Энэ үйлдлийг буцаах боломжгүй.')) return;
+    if (!confirm('Тест өгөгдлийг бүгдийг устгах уу? Энэ үйлдлийг буцаах боломжгүй. / Delete all test data? This action cannot be undone.')) return;
     setCleaning(true);
     setCleanupMsg(null);
     try {
@@ -123,10 +123,10 @@ export default function StressTestPage() {
       if (res.ok) {
         const d = data.deleted ?? {};
         setCleanupMsg(
-          `${d.conversations ?? 0} харилцан яриа, ${d.messages ?? 0} мессеж, ${d.orders ?? 0} захиалга устгагдлаа`,
+          `${d.conversations ?? 0} харилцан яриа / conversations, ${d.messages ?? 0} мессеж / messages, ${d.orders ?? 0} захиалга / orders устгагдлаа / deleted`,
         );
       } else {
-        setCleanupMsg('Устгахад алдаа гарлаа');
+        setCleanupMsg('Устгахад алдаа гарлаа / Error deleting');
       }
     } finally {
       setCleaning(false);
@@ -182,7 +182,7 @@ export default function StressTestPage() {
   }
 
   async function cleanupLoad() {
-    if (!confirm('Ачааллын тест өгөгдлийг устгах уу?')) return;
+    if (!confirm('Ачааллын тест өгөгдлийг устгах уу? / Delete load test data?')) return;
     setLoadCleaning(true);
     setLoadCleanupMsg(null);
     try {
@@ -191,10 +191,10 @@ export default function StressTestPage() {
       if (res.ok) {
         const d = data.deleted ?? {};
         setLoadCleanupMsg(
-          `${d.conversations ?? 0} харилцан яриа, ${d.messages ?? 0} мессеж устгагдлаа`,
+          `${d.conversations ?? 0} харилцан яриа / conversations, ${d.messages ?? 0} мессеж / messages устгагдлаа / deleted`,
         );
       } else {
-        setLoadCleanupMsg('Устгахад алдаа гарлаа');
+        setLoadCleanupMsg('Устгахад алдаа гарлаа / Error deleting');
       }
     } finally {
       setLoadCleaning(false);
@@ -206,17 +206,17 @@ export default function StressTestPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Стресс тест</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Стресс тест / Stress test</h1>
         <p className="text-sm text-slate-600 mt-1">
-          Chatbot-ийн бүх үндсэн логикийг шалгах автомат тест
+          Chatbot-ийн бүх үндсэн логикийг шалгах автомат тест / Automated tests for all core chatbot logic
         </p>
       </div>
 
       <div className="mb-6 border border-amber-200 bg-amber-50 rounded-lg p-4 flex gap-3">
         <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-amber-900">
-          <p className="font-medium">Стресс тест нь ERP-д захиалга үүсгэхгүй.</p>
-          <p>Зөвхөн chatbot-ийн логикийг шалгана. Тест дуусаад өгөгдлийг устгаж болно.</p>
+          <p className="font-medium">Стресс тест нь ERP-д захиалга үүсгэхгүй. / Stress tests do not create ERP orders.</p>
+          <p>Зөвхөн chatbot-ийн логикийг шалгана. Тест дуусаад өгөгдлийг устгаж болно. / Only chatbot logic is tested. Test data can be cleaned up afterwards.</p>
         </div>
       </div>
 
@@ -227,7 +227,7 @@ export default function StressTestPage() {
           className="inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-          {running ? 'Ажиллаж байна...' : 'Стресс тест эхлэх'}
+          {running ? 'Ажиллаж байна... / Running...' : 'Стресс тест эхлэх / Start stress test'}
         </button>
 
         {results.length > 0 && !running && (
@@ -236,7 +236,7 @@ export default function StressTestPage() {
               onClick={exportJson}
               className="inline-flex items-center gap-2 border border-slate-300 text-slate-700 px-4 py-2.5 rounded-lg hover:bg-slate-100"
             >
-              <Download className="w-4 h-4" /> JSON татах
+              <Download className="w-4 h-4" /> JSON татах / Download JSON
             </button>
             <button
               onClick={cleanup}
@@ -244,7 +244,7 @@ export default function StressTestPage() {
               className="inline-flex items-center gap-2 border border-red-300 text-red-700 px-4 py-2.5 rounded-lg hover:bg-red-50 disabled:opacity-50"
             >
               {cleaning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              Тест өгөгдлийг устгах
+              Тест өгөгдлийг устгах / Delete test data
             </button>
           </>
         )}
@@ -254,11 +254,11 @@ export default function StressTestPage() {
 
       {(running || results.length > 0) && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          <Stat label="Нийт" value={totals.total} color="slate" />
-          <Stat label="Амжилттай" value={totals.pass} color="emerald" />
-          <Stat label="Амжилтгүй" value={totals.fail} color="red" />
-          <Stat label="Анхааруулга" value={totals.warn} color="amber" />
-          <Stat label="Хугацаа" value={`${duration}мс`} color="slate" />
+          <Stat label="Нийт / Total" value={totals.total} color="slate" />
+          <Stat label="Амжилттай / Passed" value={totals.pass} color="emerald" />
+          <Stat label="Амжилтгүй / Failed" value={totals.fail} color="red" />
+          <Stat label="Анхааруулга / Warnings" value={totals.warn} color="amber" />
+          <Stat label="Хугацаа / Duration" value={`${duration}мс`} color="slate" />
         </div>
       )}
 
@@ -312,20 +312,20 @@ export default function StressTestPage() {
             <Zap className="w-5 h-5 text-amber-600" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Ачааллын тест (30 пэйж)</h2>
+            <h2 className="text-xl font-bold text-slate-900">Ачааллын тест (30 пэйж) / Load test (30 pages)</h2>
             <p className="text-sm text-slate-600">
-              Бодит өгөгдөл дээр үндэслэсэн: 30 пэйж, 5,263 мессеж/цаг оргил ачаалал
+              Бодит өгөгдөл дээр үндэслэсэн: 30 пэйж, 5,263 мессеж/цаг оргил ачаалал / Based on real data: 30 pages, 5,263 msg/hour peak load
             </p>
           </div>
         </div>
 
         <div className="mb-6 border border-blue-200 bg-blue-50 rounded-lg p-4 text-sm text-blue-900">
-          <p className="font-medium mb-1">Бодит өгөгдлийн шинжилгээ:</p>
+          <p className="font-medium mb-1">Бодит өгөгдлийн шинжилгээ / Real data analysis:</p>
           <ul className="list-disc list-inside space-y-0.5 text-blue-800">
-            <li>1 пэйж: 164 харилцан яриа/өдөр, 1,027 мессеж/өдөр</li>
-            <li>Оргил цаг (10:00): 175 мессеж/цаг/пэйж</li>
-            <li>30 пэйж оргил: 88 мессеж/мин = 1.5 мессеж/сек</li>
-            <li>Бот бүр 684ms дотор хариу өгөх ёстой</li>
+            <li>1 пэйж: 164 харилцан яриа/өдөр, 1,027 мессеж/өдөр / 1 page: 164 conversations/day, 1,027 messages/day</li>
+            <li>Оргил цаг (10:00): 175 мессеж/цаг/пэйж / Peak hour (10:00): 175 msg/hr/page</li>
+            <li>30 пэйж оргил: 88 мессеж/мин = 1.5 мессеж/сек / 30 pages peak: 88 msg/min = 1.5 msg/sec</li>
+            <li>Бот бүр 684ms дотор хариу өгөх ёстой / Each bot must reply within 684ms</li>
           </ul>
         </div>
 
@@ -336,7 +336,7 @@ export default function StressTestPage() {
             className="inline-flex items-center gap-2 bg-amber-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-amber-700 disabled:opacity-50"
           >
             {loadRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-            {loadRunning ? 'Ачааллаж байна...' : 'Ачааллын тест эхлэх'}
+            {loadRunning ? 'Ачааллаж байна... / Running load test...' : 'Ачааллын тест эхлэх / Start load test'}
           </button>
 
           {loadResults.length > 0 && !loadRunning && (
@@ -346,7 +346,7 @@ export default function StressTestPage() {
               className="inline-flex items-center gap-2 border border-red-300 text-red-700 px-4 py-2.5 rounded-lg hover:bg-red-50 disabled:opacity-50"
             >
               {loadCleaning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              Ачааллын тест өгөгдөл устгах
+              Ачааллын тест өгөгдөл устгах / Delete load test data
             </button>
           )}
 
@@ -356,26 +356,26 @@ export default function StressTestPage() {
         {loadSummary && (
           <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="border border-slate-200 rounded-lg p-4 bg-white">
-              <div className="text-xs text-slate-500 mb-1">Бодит 30 пэйж даах чадвар</div>
+              <div className="text-xs text-slate-500 mb-1">Бодит 30 пэйж даах чадвар / 30-page capacity</div>
               <div className="text-2xl font-bold text-slate-900">{loadSummary.percent}%</div>
-              <div className="text-xs text-slate-500 mt-1">{loadSummary.pass}/{loadResults.length} амжилттай</div>
+              <div className="text-xs text-slate-500 mt-1">{loadSummary.pass}/{loadResults.length} амжилттай / passed</div>
             </div>
             <div className="border border-slate-200 rounded-lg p-4 bg-white">
-              <div className="text-xs text-slate-500 mb-1">Өдөрт 30,810 мессеж</div>
+              <div className="text-xs text-slate-500 mb-1">Өдөрт 30,810 мессеж / 30,810 messages/day</div>
               <div className={`text-2xl font-bold ${loadSummary.canHandle ? 'text-emerald-600' : 'text-red-600'}`}>
-                {loadSummary.canHandle ? 'ТИЙМ' : 'ҮГҮЙ'}
+                {loadSummary.canHandle ? 'ТИЙМ / YES' : 'ҮГҮЙ / NO'}
               </div>
-              <div className="text-xs text-slate-500 mt-1">Боловсруулах боломжтой</div>
+              <div className="text-xs text-slate-500 mt-1">Боловсруулах боломжтой / Can handle</div>
             </div>
             <div className="border border-slate-200 rounded-lg p-4 bg-white">
-              <div className="text-xs text-slate-500 mb-1">Facebook блок эрсдэл</div>
+              <div className="text-xs text-slate-500 mb-1">Facebook блок эрсдэл / Facebook block risk</div>
               <div className={`text-2xl font-bold ${
                 loadSummary.fbRisk === 'БАГА' ? 'text-emerald-600' :
                 loadSummary.fbRisk === 'ДУНД' ? 'text-amber-600' : 'text-red-600'
               }`}>{loadSummary.fbRisk}</div>
             </div>
             <div className="border border-slate-200 rounded-lg p-4 bg-white">
-              <div className="text-xs text-slate-500 mb-1">Зөвлөмж</div>
+              <div className="text-xs text-slate-500 mb-1">Зөвлөмж / Recommendation</div>
               <div className="text-sm font-medium text-slate-900">{loadSummary.recommendation}</div>
             </div>
           </div>
@@ -384,7 +384,7 @@ export default function StressTestPage() {
         {loadResults.length > 0 && (
           <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
             <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-              <h3 className="font-semibold text-slate-900 text-sm">Ачааллын тестийн үр дүн</h3>
+              <h3 className="font-semibold text-slate-900 text-sm">Ачааллын тестийн үр дүн / Load test results</h3>
             </div>
             <ul className="divide-y divide-slate-100">
               {loadResults.map((r) => (
@@ -423,9 +423,9 @@ export default function StressTestPage() {
 function RiskBadge({ risk }: { risk?: 'safe' | 'caution' | 'danger' }) {
   if (!risk) return null;
   const map = {
-    safe: { label: 'АЮУЛГҮЙ', cls: 'bg-emerald-100 text-emerald-700' },
-    caution: { label: 'БОЛГООМЖТОЙ', cls: 'bg-amber-100 text-amber-700' },
-    danger: { label: 'ЭРСДЭЛТЭЙ', cls: 'bg-red-100 text-red-700' },
+    safe: { label: 'АЮУЛГҮЙ / SAFE', cls: 'bg-emerald-100 text-emerald-700' },
+    caution: { label: 'БОЛГООМЖТОЙ / CAUTION', cls: 'bg-amber-100 text-amber-700' },
+    danger: { label: 'ЭРСДЭЛТЭЙ / DANGER', cls: 'bg-red-100 text-red-700' },
   };
   const { label, cls } = map[risk];
   return <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${cls}`}>{label}</span>;

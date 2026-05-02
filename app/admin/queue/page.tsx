@@ -15,7 +15,7 @@ export default function QueuePage() {
 
   return (
     <div className="p-8 max-w-6xl">
-      <h1 className="text-2xl font-bold text-slate-900 mb-6">Queue</h1>
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">Дараалал / Queue</h1>
       <div className="grid md:grid-cols-3 gap-4 mb-6">
         {pages.map((p) => {
           const count = items.filter((i) => i.pageId === p.pageId).length;
@@ -23,7 +23,7 @@ export default function QueuePage() {
             <div key={p.pageId} className="bg-white rounded-xl border border-slate-200 p-5">
               <div className="text-xs text-slate-500 uppercase">{p.pageName}</div>
               <div className="text-3xl font-bold text-slate-900 mt-1">{count}</div>
-              <div className="text-xs text-slate-600 mt-1">хязгаар: {p.hourlyCommentLimit}/цаг</div>
+              <div className="text-xs text-slate-600 mt-1">хязгаар / limit: {p.hourlyCommentLimit}/цаг / hr</div>
             </div>
           );
         })}
@@ -33,10 +33,10 @@ export default function QueuePage() {
           <div key={c.id} className="p-4">
             <div className="text-sm font-medium text-slate-900">{c.senderName || 'Unknown'}</div>
             <div className="text-sm text-slate-700 mt-0.5">{c.commentText}</div>
-            <div className="text-xs text-slate-500 mt-1">Илгээх цаг: {c.scheduledFor ? new Date(c.scheduledFor).toLocaleString('mn-MN') : '—'}</div>
+            <div className="text-xs text-slate-500 mt-1">Илгээх цаг / Scheduled at: {c.scheduledFor ? new Date(c.scheduledFor).toLocaleString('mn-MN') : '—'}</div>
           </div>
         ))}
-        {!items.length && <div className="p-8 text-center text-slate-500 text-sm">Queue хоосон</div>}
+        {!items.length && <div className="p-8 text-center text-slate-500 text-sm">Queue хоосон / Queue is empty</div>}
       </div>
     </div>
   );

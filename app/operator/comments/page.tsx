@@ -18,13 +18,13 @@ interface CommentItem {
 }
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
-  queued: { label: 'Хүлээлтэд', cls: 'bg-amber-100 text-amber-700' },
-  sent: { label: 'Илгээсэн', cls: 'bg-blue-100 text-blue-700' },
-  skipped: { label: 'Алгассан', cls: 'bg-slate-200 text-slate-600' },
-  failed: { label: 'Алдаа', cls: 'bg-red-100 text-red-700' },
-  CALLED: { label: 'Дуудсан', cls: 'bg-sky-100 text-sky-700' },
-  CONFIRMED: { label: 'Захиалга болсон', cls: 'bg-emerald-100 text-emerald-700' },
-  NOT_INTERESTED: { label: 'Болохгүй', cls: 'bg-rose-100 text-rose-700' },
+  queued: { label: 'Хүлээлтэд / Queued', cls: 'bg-amber-100 text-amber-700' },
+  sent: { label: 'Илгээсэн / Sent', cls: 'bg-blue-100 text-blue-700' },
+  skipped: { label: 'Алгассан / Skipped', cls: 'bg-slate-200 text-slate-600' },
+  failed: { label: 'Алдаа / Failed', cls: 'bg-red-100 text-red-700' },
+  CALLED: { label: 'Дуудсан / Called', cls: 'bg-sky-100 text-sky-700' },
+  CONFIRMED: { label: 'Захиалга болсон / Confirmed', cls: 'bg-emerald-100 text-emerald-700' },
+  NOT_INTERESTED: { label: 'Болохгүй / Not interested', cls: 'bg-rose-100 text-rose-700' },
 };
 
 export default function OperatorCommentsPage() {
@@ -69,10 +69,10 @@ export default function OperatorCommentsPage() {
       body: JSON.stringify({ status: newStatus }),
     });
     if (!r.ok) {
-      toast.error('Алдаа гарлаа');
+      toast.error('Алдаа гарлаа / Error');
       return;
     }
-    toast.success('Шинэчлэгдлээ');
+    toast.success('Шинэчлэгдлээ / Updated');
     load();
   }
 
@@ -80,8 +80,8 @@ export default function OperatorCommentsPage() {
     <div className="h-screen overflow-auto">
       <div className="p-8 max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Коммент</h1>
-          <span className="text-sm text-slate-500">{total.toLocaleString()} бичлэг</span>
+          <h1 className="text-2xl font-bold text-slate-900">Коммент / Comments</h1>
+          <span className="text-sm text-slate-500">{total.toLocaleString()} бичлэг / records</span>
         </div>
 
         <div className="flex flex-wrap gap-3 mb-4">
@@ -90,23 +90,23 @@ export default function OperatorCommentsPage() {
             onChange={(e) => setStatus(e.target.value)}
             className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
           >
-            <option value="">Бүх төлөв</option>
-            <option value="queued">Хүлээлтэд</option>
-            <option value="sent">Илгээсэн</option>
-            <option value="CALLED">Дуудсан</option>
-            <option value="CONFIRMED">Захиалга болсон</option>
-            <option value="NOT_INTERESTED">Болохгүй</option>
-            <option value="skipped">Алгассан</option>
-            <option value="failed">Алдаа</option>
+            <option value="">Бүх төлөв / All statuses</option>
+            <option value="queued">Хүлээлтэд / Queued</option>
+            <option value="sent">Илгээсэн / Sent</option>
+            <option value="CALLED">Дуудсан / Called</option>
+            <option value="CONFIRMED">Захиалга болсон / Confirmed</option>
+            <option value="NOT_INTERESTED">Болохгүй / Not interested</option>
+            <option value="skipped">Алгассан / Skipped</option>
+            <option value="failed">Алдаа / Failed</option>
           </select>
           <select
             value={hasPhone}
             onChange={(e) => { setHasPhone(e.target.value); setPage(1); }}
             className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
           >
-            <option value="">Бүгд</option>
-            <option value="1">Утастай</option>
-            <option value="0">Утасгүй</option>
+            <option value="">Бүгд / All</option>
+            <option value="1">Утастай / With phone</option>
+            <option value="0">Утасгүй / No phone</option>
           </select>
           <form
             onSubmit={(e) => { e.preventDefault(); setSearch(searchInput.trim()); setPage(1); }}
@@ -116,7 +116,7 @@ export default function OperatorCommentsPage() {
             <input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Текст, нэр, утасаар хайх..."
+              placeholder="Текст, нэр, утасаар хайх / Search text, name, phone..."
               className="w-full pl-8 pr-8 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
             />
             {search && (
@@ -129,7 +129,7 @@ export default function OperatorCommentsPage() {
             onClick={() => { setShowArchived(v => !v); setPage(1); }}
             className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition ${showArchived ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}
           >
-            <Archive className="w-4 h-4" /> {showArchived ? 'Архив харах' : 'Архив харах'}
+            <Archive className="w-4 h-4" /> {showArchived ? 'Архив / Archive' : 'Архив харах / Show archive'}
           </button>
         </div>
 
@@ -154,9 +154,9 @@ export default function OperatorCommentsPage() {
                   <div className="text-xs text-slate-500 mt-2 flex flex-wrap gap-3">
                     <span>{new Date(c.queuedAt || c.createdAt).toLocaleString('mn-MN')}</span>
                     {c.extractedPhone && (
-                      <span className="text-slate-700 font-medium">Утас: {c.extractedPhone}</span>
+                      <span className="text-slate-700 font-medium">Утас / Phone: {c.extractedPhone}</span>
                     )}
-                    {c.productCode && <span>Код: {c.productCode}</span>}
+                    {c.productCode && <span>Код / Code: {c.productCode}</span>}
                     {c.intent && <span>Intent: {c.intent}</span>}
                   </div>
                 </div>

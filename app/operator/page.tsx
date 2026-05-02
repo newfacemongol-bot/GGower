@@ -34,13 +34,13 @@ interface ConvItem {
 type TabKey = 'all' | 'ordered' | 'addr_missing' | 'phone_missing' | 'waiting' | 'handoff' | 'calls';
 
 const TAB_META: { key: TabKey; label: string; color: string; dot: string }[] = [
-  { key: 'all', label: 'Бүгд', color: 'text-slate-700 border-slate-700', dot: 'bg-slate-400' },
-  { key: 'ordered', label: 'Захиалга үүссэн', color: 'text-emerald-700 border-emerald-600', dot: 'bg-emerald-500' },
-  { key: 'addr_missing', label: 'Хаяг дутуу', color: 'text-amber-700 border-amber-500', dot: 'bg-amber-400' },
-  { key: 'phone_missing', label: 'Утас дутуу', color: 'text-blue-700 border-blue-500', dot: 'bg-blue-500' },
-  { key: 'waiting', label: 'Хариу хүлээж', color: 'text-red-700 border-red-500', dot: 'bg-red-500' },
-  { key: 'handoff', label: 'Оператортой холбогдох', color: 'text-fuchsia-700 border-fuchsia-500', dot: 'bg-fuchsia-500' },
-  { key: 'calls', label: 'Залгах жагсаалт', color: 'text-teal-700 border-teal-500', dot: 'bg-teal-500' },
+  { key: 'all', label: 'Бүгд / All', color: 'text-slate-700 border-slate-700', dot: 'bg-slate-400' },
+  { key: 'ordered', label: 'Захиалга үүссэн / Orders', color: 'text-emerald-700 border-emerald-600', dot: 'bg-emerald-500' },
+  { key: 'addr_missing', label: 'Хаяг дутуу / Missing address', color: 'text-amber-700 border-amber-500', dot: 'bg-amber-400' },
+  { key: 'phone_missing', label: 'Утас дутуу / Missing phone', color: 'text-blue-700 border-blue-500', dot: 'bg-blue-500' },
+  { key: 'waiting', label: 'Хариу хүлээж / Awaiting reply', color: 'text-red-700 border-red-500', dot: 'bg-red-500' },
+  { key: 'handoff', label: 'Оператортой холбогдох / Operator handoff', color: 'text-fuchsia-700 border-fuchsia-500', dot: 'bg-fuchsia-500' },
+  { key: 'calls', label: 'Залгах жагсаалт / Call list', color: 'text-teal-700 border-teal-500', dot: 'bg-teal-500' },
 ];
 
 function isToday(d: string | Date): boolean {
@@ -55,11 +55,11 @@ function minutesSince(d: string | Date): number {
 
 function relativeTime(d: string | Date): string {
   const m = minutesSince(d);
-  if (m < 1) return 'дөнгөж сая';
-  if (m < 60) return `${m} мин өмнө`;
+  if (m < 1) return 'дөнгөж сая / just now';
+  if (m < 60) return `${m} мин өмнө / min ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} цаг өмнө`;
-  return `${Math.floor(h / 24)} өдөр өмнө`;
+  if (h < 24) return `${h} цаг өмнө / hr ago`;
+  return `${Math.floor(h / 24)} өдөр өмнө / days ago`;
 }
 
 const FB_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -108,11 +108,11 @@ function classifyConv(c: ConvItem): TabKey[] {
 
 function missingBadges(c: ConvItem): { cls: string; text: string }[] {
   const badges: { cls: string; text: string }[] = [];
-  if (isUrgentFlag(c)) badges.push({ cls: 'bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-300', text: 'Оператор шаардлагатай' });
-  if (isSilent(c)) badges.push({ cls: 'bg-red-100 text-red-800 border border-red-300', text: 'Хариу байхгүй' });
-  if (c.hasPhone && !c.hasAddress) badges.push({ cls: 'bg-amber-100 text-amber-800 border border-amber-300', text: 'Хаяг дутуу' });
-  if (c.hasAddress && !c.hasPhone) badges.push({ cls: 'bg-blue-100 text-blue-800 border border-blue-300', text: 'Утас дутуу' });
-  if (!c.hasProduct && c.state !== 'IDLE' && c.state !== 'DONE') badges.push({ cls: 'bg-orange-100 text-orange-800 border border-orange-300', text: 'Бараа дутуу' });
+  if (isUrgentFlag(c)) badges.push({ cls: 'bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-300', text: 'Оператор шаардлагатай / Operator needed' });
+  if (isSilent(c)) badges.push({ cls: 'bg-red-100 text-red-800 border border-red-300', text: 'Хариу байхгүй / No reply' });
+  if (c.hasPhone && !c.hasAddress) badges.push({ cls: 'bg-amber-100 text-amber-800 border border-amber-300', text: 'Хаяг дутуу / Missing address' });
+  if (c.hasAddress && !c.hasPhone) badges.push({ cls: 'bg-blue-100 text-blue-800 border border-blue-300', text: 'Утас дутуу / Missing phone' });
+  if (!c.hasProduct && c.state !== 'IDLE' && c.state !== 'DONE') badges.push({ cls: 'bg-orange-100 text-orange-800 border border-orange-300', text: 'Бараа дутуу / Missing product' });
   return badges;
 }
 
@@ -226,7 +226,7 @@ export default function OperatorPage() {
     });
     if (res.status === 403) {
       const d = await res.json().catch(() => ({}));
-      toast.error(d.message || '24 цагийн цонх хэтэрсэн байна.');
+      toast.error(d.message || '24 цагийн цонх хэтэрсэн байна. / 24-hour window expired.');
       setText(msg);
       loadConv(activeId);
       return;
@@ -274,7 +274,7 @@ export default function OperatorPage() {
 
   async function resetConv(id: string, e?: React.MouseEvent) {
     e?.stopPropagation();
-    if (!confirm('Энэ харилцан яриаг дахин эхлүүлэх үү?')) return;
+    if (!confirm('Энэ харилцан яриаг дахин эхлүүлэх үү? / Reset this conversation?')) return;
     await fetch(`/api/operator/conversations/${id}/reset`, { method: 'POST' });
     loadList();
     if (activeId === id) loadConv(id);
@@ -311,7 +311,7 @@ export default function OperatorPage() {
   }
 
   async function deleteHiddenComment(id: string) {
-    if (!confirm('Энэ коммэнтийг устгах уу?')) return;
+    if (!confirm('Энэ коммэнтийг устгах уу? / Delete this comment?')) return;
     await fetch(`/api/operator/hidden-comments/${id}`, { method: 'DELETE' });
     loadPhones();
   }
@@ -326,25 +326,25 @@ export default function OperatorPage() {
       <aside className="w-96 bg-white border-r border-slate-200 flex flex-col">
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-slate-900">Чат удирдлага</h2>
+            <h2 className="font-bold text-slate-900">Чат удирдлага / Chat panel</h2>
             <div className="text-[11px] text-slate-500 mt-0.5">
-              Сүүлд шинэчлэгдсэн: {Math.max(0, Math.floor((now - lastRefreshAt) / 1000))} сек өмнө
+              Сүүлд шинэчлэгдсэн / Last refreshed: {Math.max(0, Math.floor((now - lastRefreshAt) / 1000))} сек / s ago
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => { setShowArchived(v => !v); setConvPage(1); }}
               className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border transition ${showArchived ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}
-              title="Архив харах"
+              title="Архив харах / Show archive"
             >
-              <Archive className="w-3 h-3" /> {showArchived ? 'Архив' : 'Архив харах'}
+              <Archive className="w-3 h-3" /> {showArchived ? 'Архив / Archive' : 'Архив харах / Show archive'}
             </button>
             <button
               onClick={() => { setShowPhones(true); loadPhones(); }}
               className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-              title="Комментоос цуглуулсан"
+              title="Комментоос цуглуулсан / Collected from comments"
             >
-              <Phone className="w-3 h-3" /> Утас
+              <Phone className="w-3 h-3" /> Утас / Phone
             </button>
             <button onClick={logout} className="text-slate-500 hover:text-slate-900"><LogOut className="w-4 h-4" /></button>
           </div>
@@ -358,7 +358,7 @@ export default function OperatorPage() {
             <input
               value={convSearchInput}
               onChange={(e) => setConvSearchInput(e.target.value)}
-              placeholder="Хэрэглэгч/утас хайх..."
+              placeholder="Хэрэглэгч/утас хайх / Search user or phone..."
               className="w-full pl-8 pr-8 py-1.5 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900"
             />
             {convSearch && (
@@ -409,7 +409,7 @@ export default function OperatorPage() {
             }
 
             if (filtered.length === 0) {
-              return <div className="p-8 text-center text-slate-500 text-sm">Чат байхгүй</div>;
+              return <div className="p-8 text-center text-slate-500 text-sm">Чат байхгүй / No chats</div>;
             }
 
             return filtered.map((c) => {
@@ -447,7 +447,7 @@ export default function OperatorPage() {
                   {isOrderedTab && c.order && (
                     <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1.5 text-xs space-y-0.5">
                       <div className="font-semibold text-emerald-800">
-                        Захиалга #{c.order.erpOrderNumber || c.order.erpOrderId}
+                        Захиалга / Order #{c.order.erpOrderNumber || c.order.erpOrderId}
                       </div>
                       {c.order.productName && <div className="text-emerald-900 truncate">{c.order.productName}</div>}
                       {c.order.address && <div className="text-emerald-700 truncate">{c.order.address}</div>}
@@ -476,7 +476,7 @@ export default function OperatorPage() {
                         onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-teal-600 text-white rounded hover:bg-teal-700"
                       >
-                        <Phone className="w-3 h-3" /> Дуудах
+                        <Phone className="w-3 h-3" /> Дуудах / Call
                       </a>
                     )}
                     {isOrderedTab && c.order?.erpOrderId && (
@@ -487,16 +487,16 @@ export default function OperatorPage() {
                     <button
                       onClick={(e) => resetConv(c.id, e)}
                       className="inline-flex items-center gap-1 text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-100 text-slate-700"
-                      title="Харилцан яриаг дахин эхлүүлэх"
+                      title="Харилцан яриаг дахин эхлүүлэх / Reset conversation"
                     >
-                      <RotateCcw className="w-3 h-3" /> Дахин эхлэх
+                      <RotateCcw className="w-3 h-3" /> Дахин эхлэх / Reset
                     </button>
                     {c.isSpam && (
                       <button
                         onClick={(e) => unspam(c.id, e)}
                         className="inline-flex items-center gap-1 text-xs px-2 py-1 border border-red-300 text-red-700 rounded hover:bg-red-50"
                       >
-                        Буцаах
+                        Буцаах / Unspam
                       </button>
                     )}
                   </div>
@@ -513,7 +513,7 @@ export default function OperatorPage() {
       </aside>
 
       <main className="flex-1 flex">
-        {!conv && <div className="flex-1 flex items-center justify-center text-slate-500">Чат сонгоно уу</div>}
+        {!conv && <div className="flex-1 flex items-center justify-center text-slate-500">Чат сонгоно уу / Select a chat</div>}
         {conv && (
           <>
             <div className="flex-1 flex flex-col min-w-0" style={{ flexBasis: '70%' }}>
@@ -524,10 +524,10 @@ export default function OperatorPage() {
               </div>
               <div className="flex gap-2">
                 <button onClick={toggleHandoff} className="text-sm px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50">
-                  {conv.isOperatorHandoff ? 'Bot-д шилжүүлэх' : 'Оператор авах'}
+                  {conv.isOperatorHandoff ? 'Bot-д шилжүүлэх / Hand to bot' : 'Оператор авах / Take over'}
                 </button>
                 <button onClick={close} className="text-sm px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50">
-                  Дуусгах
+                  Дуусгах / Close
                 </button>
               </div>
             </header>
@@ -539,19 +539,19 @@ export default function OperatorPage() {
                     className="flex-1 bg-white border border-amber-300 rounded px-2 py-1 text-sm"
                     value={noteDraft}
                     onChange={(e) => setNoteDraft(e.target.value)}
-                    placeholder="Тэмдэглэл... (ж: үнэ эргэлзэлтэй)"
+                    placeholder="Тэмдэглэл / Note... (e.g. price hesitation)"
                     autoFocus
                   />
-                  <button onClick={saveNote} className="text-sm px-2 py-1 bg-amber-600 text-white rounded">Хадгалах</button>
-                  <button onClick={() => { setEditingNote(false); setNoteDraft(conv.handoffReason ?? ''); }} className="text-sm px-2 py-1 text-slate-600">Болих</button>
+                  <button onClick={saveNote} className="text-sm px-2 py-1 bg-amber-600 text-white rounded">Хадгалах / Save</button>
+                  <button onClick={() => { setEditingNote(false); setNoteDraft(conv.handoffReason ?? ''); }} className="text-sm px-2 py-1 text-slate-600">Болих / Cancel</button>
                 </>
               ) : (
                 <>
                   <span className="flex-1 text-amber-900 truncate">
-                    {conv.handoffReason ? conv.handoffReason : <span className="text-amber-700/60 italic">Тэмдэглэл байхгүй</span>}
+                    {conv.handoffReason ? conv.handoffReason : <span className="text-amber-700/60 italic">Тэмдэглэл байхгүй / No note</span>}
                   </span>
                   <button onClick={() => setEditingNote(true)} className="text-xs text-amber-700 hover:underline">
-                    Засах
+                    Засах / Edit
                   </button>
                 </>
               )}
@@ -567,7 +567,7 @@ export default function OperatorPage() {
               {showTemplates && (
                 <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-72 overflow-auto">
                   {templates.length === 0 && (
-                    <div className="p-4 text-sm text-slate-500 text-center">Template байхгүй байна</div>
+                    <div className="p-4 text-sm text-slate-500 text-center">Template байхгүй байна / No templates</div>
                   )}
                   {templates.map((t) => (
                     <button
@@ -601,7 +601,7 @@ export default function OperatorPage() {
                     <input value={text} onChange={(e) => setText(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && send()}
                       disabled={expired}
-                      placeholder={expired ? '24 цагийн цонх хаагдсан — мессеж илгээх боломжгүй' : 'Мессеж бичих...'}
+                      placeholder={expired ? '24 цагийн цонх хаагдсан / 24-hour window closed — cannot send' : 'Мессеж бичих / Type a message...'}
                       className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
                     <button
                       onClick={send}
@@ -618,7 +618,7 @@ export default function OperatorPage() {
             <CustomerInfoPanel
               conv={conv}
               onReset={() => resetConv(conv.id)}
-              onCreateOrder={() => toast('Захиалга үүсгэх үйлдэл удахгүй нэмэгдэнэ')}
+              onCreateOrder={() => toast('Захиалга үүсгэх үйлдэл удахгүй нэмэгдэнэ / Order creation coming soon')}
             />
           </>
         )}
@@ -628,7 +628,7 @@ export default function OperatorPage() {
         <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={() => setShowPhones(false)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="font-bold text-slate-900">Коммент удирдлага</h3>
+              <h3 className="font-bold text-slate-900">Коммент удирдлага / Comment panel</h3>
               <button onClick={() => setShowPhones(false)} className="text-slate-500 hover:text-slate-900"><X className="w-5 h-5" /></button>
             </div>
             <div className="px-6 pt-3 border-b border-slate-200 flex gap-1">
@@ -636,20 +636,20 @@ export default function OperatorPage() {
                 onClick={() => setPhonesTab('phones')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${phonesTab === 'phones' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
               >
-                <span className="inline-flex items-center gap-1"><Phone className="w-4 h-4" /> Цуглуулсан утаснууд ({phones.length})</span>
+                <span className="inline-flex items-center gap-1"><Phone className="w-4 h-4" /> Цуглуулсан утаснууд / Collected phones ({phones.length})</span>
               </button>
               <button
                 onClick={() => setPhonesTab('hidden')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${phonesTab === 'hidden' ? 'border-red-600 text-red-700' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
               >
-                <span className="inline-flex items-center gap-1"><EyeOff className="w-4 h-4" /> Нуугдсан коммент ({hidden.length})</span>
+                <span className="inline-flex items-center gap-1"><EyeOff className="w-4 h-4" /> Нуугдсан коммент / Hidden comments ({hidden.length})</span>
               </button>
             </div>
             <div className="flex-1 overflow-auto">
-              {phonesLoading && <div className="p-8 text-center text-slate-500 text-sm">Ачааллаж байна...</div>}
+              {phonesLoading && <div className="p-8 text-center text-slate-500 text-sm">Ачааллаж байна... / Loading...</div>}
               {!phonesLoading && phonesTab === 'phones' && (
                 <>
-                  {phones.length === 0 && <div className="p-8 text-center text-slate-500 text-sm">Утас олдсонгүй</div>}
+                  {phones.length === 0 && <div className="p-8 text-center text-slate-500 text-sm">Утас олдсонгүй / No phones found</div>}
                   <div className="divide-y divide-slate-100">
                     {phones.map((p) => (
                       <div key={p.id} className="px-6 py-3 hover:bg-slate-50">
@@ -662,7 +662,7 @@ export default function OperatorPage() {
                             <div className="text-sm text-slate-700 line-clamp-2 mb-1">{p.commentText}</div>
                             {p.postLink && (
                               <a href={p.postLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
-                                Постыг харах
+                                Постыг харах / View post
                               </a>
                             )}
                           </div>
@@ -672,7 +672,7 @@ export default function OperatorPage() {
                               href={`tel:${p.phone}`}
                               className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
                             >
-                              <Phone className="w-3 h-3" /> Дуудах
+                              <Phone className="w-3 h-3" /> Дуудах / Call
                             </a>
                           </div>
                         </div>
@@ -683,7 +683,7 @@ export default function OperatorPage() {
               )}
               {!phonesLoading && phonesTab === 'hidden' && (
                 <>
-                  {hidden.length === 0 && <div className="p-8 text-center text-slate-500 text-sm">Нуугдсан коммент байхгүй</div>}
+                  {hidden.length === 0 && <div className="p-8 text-center text-slate-500 text-sm">Нуугдсан коммент байхгүй / No hidden comments</div>}
                   <div className="divide-y divide-slate-100">
                     {hidden.map((h) => (
                       <div key={h.id} className="px-6 py-3 hover:bg-slate-50">
@@ -697,7 +697,7 @@ export default function OperatorPage() {
                             <div className="text-sm text-slate-700 mb-1 whitespace-pre-wrap">{h.commentText}</div>
                             {h.postLink && (
                               <a href={h.postLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
-                                Постыг харах
+                                Постыг харах / View post
                               </a>
                             )}
                           </div>
@@ -706,13 +706,13 @@ export default function OperatorPage() {
                               onClick={() => unhideComment(h.id)}
                               className="inline-flex items-center gap-1 text-xs px-3 py-1.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100"
                             >
-                              <Eye className="w-3 h-3" /> Харуулах
+                              <Eye className="w-3 h-3" /> Харуулах / Show
                             </button>
                             <button
                               onClick={() => deleteHiddenComment(h.id)}
                               className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700"
                             >
-                              <Trash2 className="w-3 h-3" /> Устгах
+                              <Trash2 className="w-3 h-3" /> Устгах / Delete
                             </button>
                           </div>
                         </div>
@@ -735,14 +735,14 @@ function WindowPill({ lastMessageAt, now }: { lastMessageAt: string | Date; now:
   if (tone === 'expired') {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">
-        Хэтэрсэн
+        Хэтэрсэн / Expired
       </span>
     );
   }
   const totalMin = Math.floor(left / 60000);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
-  const txt = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} үлдлээ`;
+  const txt = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} үлдлээ / left`;
   const cls =
     tone === 'critical'
       ? 'bg-red-100 text-red-700'
@@ -760,9 +760,9 @@ function WindowBanner({ lastMessageAt, now }: { lastMessageAt: string | Date; no
       <div className="bg-slate-900 text-white px-6 py-3 flex items-start gap-3 border-t border-slate-800">
         <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
         <div className="text-sm">
-          <div className="font-semibold">24 цаг хэтэрсэн — мессеж илгээх боломжгүй</div>
+          <div className="font-semibold">24 цаг хэтэрсэн — мессеж илгээх боломжгүй / 24-hour window closed — cannot send</div>
           <div className="text-slate-300 mt-0.5">
-            Meta Business Suite-р орж бичнэ үү:{' '}
+            Meta Business Suite-р орж бичнэ үү / Use Meta Business Suite:{' '}
             <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" className="underline text-white">
               business.facebook.com
             </a>
@@ -776,7 +776,7 @@ function WindowBanner({ lastMessageAt, now }: { lastMessageAt: string | Date; no
     return (
       <div className="bg-red-50 border-t border-red-200 px-6 py-2 flex items-center gap-2 text-sm text-red-800">
         <AlertTriangle className="w-4 h-4 shrink-0" />
-        <span className="font-semibold">30 минутаас бага үлдлээ!</span>
+        <span className="font-semibold">30 минутаас бага үлдлээ! / Less than 30 min left!</span>
         <span className="ml-auto font-mono text-red-900">{countdown}</span>
       </div>
     );
@@ -785,16 +785,16 @@ function WindowBanner({ lastMessageAt, now }: { lastMessageAt: string | Date; no
     return (
       <div className="bg-amber-50 border-t border-amber-200 px-6 py-2 flex items-center gap-2 text-sm text-amber-900">
         <AlertTriangle className="w-4 h-4 shrink-0" />
-        <span className="font-semibold">1 цаг үлдлээ — яаравчлаарай</span>
+        <span className="font-semibold">1 цаг үлдлээ — яаравчлаарай / 1 hour left — hurry up</span>
         <span className="ml-auto font-mono">{countdown}</span>
       </div>
     );
   }
   return (
     <div className="bg-emerald-50 border-t border-emerald-100 px-6 py-1.5 flex items-center gap-2 text-xs text-emerald-800">
-      <span>Цонх хаагдахад</span>
+      <span>Цонх хаагдахад / Window closes in</span>
       <span className="font-mono font-semibold">{countdown}</span>
-      <span>үлдлээ</span>
+      <span>үлдлээ / left</span>
     </div>
   );
 }
@@ -811,7 +811,7 @@ function MessageBubble({ message }: { message: any }) {
         'bg-blue-100 text-slate-900'
       }`}>
         <div className="flex items-center gap-1.5 text-xs opacity-70 mb-0.5">
-          {fromBot ? <><Bot className="w-3 h-3" /> Bot</> : fromOp ? <><User className="w-3 h-3" /> Оператор</> : null}
+          {fromBot ? <><Bot className="w-3 h-3" /> Bot</> : fromOp ? <><User className="w-3 h-3" /> Оператор / Operator</> : null}
         </div>
         <div className="whitespace-pre-wrap">{message.text}</div>
       </div>
@@ -820,8 +820,8 @@ function MessageBubble({ message }: { message: any }) {
 }
 
 function StatusIcon({ status, handoff }: { status: string; handoff: boolean }) {
-  if (status === 'closed') return <span className="text-slate-500">Дууссан</span>;
-  if (handoff) return <span className="text-amber-600">Оператор</span>;
+  if (status === 'closed') return <span className="text-slate-500">Дууссан / Closed</span>;
+  if (handoff) return <span className="text-amber-600">Оператор / Operator</span>;
   return <span className="text-emerald-600">Bot</span>;
 }
 
@@ -862,24 +862,24 @@ function CustomerInfoPanel({ conv, onReset, onCreateOrder }: CustomerPanelProps)
   const hasProduct = !!firstProductName;
 
   let statusCls = 'bg-emerald-100 text-emerald-800 border-emerald-300';
-  let statusText = 'БЭЛЭН';
+  let statusText = 'БЭЛЭН / READY';
   let statusEmoji = 'ok';
   const missingCount = [!hasPhone, !hasAddress, !hasProduct].filter(Boolean).length;
   if (missingCount >= 2) {
     statusCls = 'bg-red-100 text-red-800 border-red-300';
-    statusText = 'ДУТУУ';
+    statusText = 'ДУТУУ / INCOMPLETE';
     statusEmoji = 'red';
   } else if (!hasProduct && hasPhone && hasAddress) {
     statusCls = 'bg-orange-100 text-orange-800 border-orange-300';
-    statusText = 'БАРАА ДУТУУ';
+    statusText = 'БАРАА ДУТУУ / NO PRODUCT';
     statusEmoji = 'orange';
   } else if (!hasAddress && hasPhone) {
     statusCls = 'bg-amber-100 text-amber-800 border-amber-300';
-    statusText = 'ХАЯГ ДУТУУ';
+    statusText = 'ХАЯГ ДУТУУ / NO ADDRESS';
     statusEmoji = 'amber';
   } else if (!hasPhone && hasAddress) {
     statusCls = 'bg-blue-100 text-blue-800 border-blue-300';
-    statusText = 'УТАС ДУТУУ';
+    statusText = 'УТАС ДУТУУ / NO PHONE';
     statusEmoji = 'blue';
   }
 
@@ -890,7 +890,7 @@ function CustomerInfoPanel({ conv, onReset, onCreateOrder }: CustomerPanelProps)
       <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-slate-700" />
-          <h3 className="font-semibold text-slate-900 text-sm">Хэрэглэгчийн мэдээлэл</h3>
+          <h3 className="font-semibold text-slate-900 text-sm">Хэрэглэгчийн мэдээлэл / Customer info</h3>
         </div>
         <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${statusCls}`}>
           <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle ${
@@ -904,31 +904,31 @@ function CustomerInfoPanel({ conv, onReset, onCreateOrder }: CustomerPanelProps)
       </div>
 
       <div className="flex-1 overflow-auto p-4 space-y-3 text-sm">
-        <InfoRow icon={<Phone className="w-4 h-4" />} label="Утас" value={phone} missing={!hasPhone} missingText="ДУТУУ" mono />
-        <InfoRow icon={<Phone className="w-4 h-4 opacity-70" />} label="Нэмэлт утас" value={extraPhone} mono />
-        <InfoRow icon={<Home className="w-4 h-4" />} label="Хаяг" value={address} missing={!hasAddress} missingText="ДУТУУ" />
-        <InfoRow icon={<MapPin className="w-4 h-4" />} label="Дүүрэг" value={district} />
-        <InfoRow icon={<Globe2 className="w-4 h-4" />} label="Аймаг/хот" value={province} missing={!province} missingText="ДУТУУ" />
-        <InfoRow icon={<Package className="w-4 h-4" />} label="Бараа" value={firstProductName} missing={!hasProduct} missingText="ДУТУУ" />
-        <InfoRow icon={<Hash className="w-4 h-4" />} label="Тоо" value={totalQuantity ? `${totalQuantity}ш` : null} />
-        <InfoRow icon={<Wallet className="w-4 h-4" />} label="Нийт" value={orderTotal ? `${orderTotal.toLocaleString()}₮` : null} />
-        <InfoRow icon={<NotebookPen className="w-4 h-4" />} label="Тэмдэглэл" value={note} />
+        <InfoRow icon={<Phone className="w-4 h-4" />} label="Утас / Phone" value={phone} missing={!hasPhone} missingText="ДУТУУ / MISSING" mono />
+        <InfoRow icon={<Phone className="w-4 h-4 opacity-70" />} label="Нэмэлт утас / Extra phone" value={extraPhone} mono />
+        <InfoRow icon={<Home className="w-4 h-4" />} label="Хаяг / Address" value={address} missing={!hasAddress} missingText="ДУТУУ / MISSING" />
+        <InfoRow icon={<MapPin className="w-4 h-4" />} label="Дүүрэг / District" value={district} />
+        <InfoRow icon={<Globe2 className="w-4 h-4" />} label="Аймаг/хот / Province/city" value={province} missing={!province} missingText="ДУТУУ / MISSING" />
+        <InfoRow icon={<Package className="w-4 h-4" />} label="Бараа / Product" value={firstProductName} missing={!hasProduct} missingText="ДУТУУ / MISSING" />
+        <InfoRow icon={<Hash className="w-4 h-4" />} label="Тоо / Quantity" value={totalQuantity ? `${totalQuantity}ш / pcs` : null} />
+        <InfoRow icon={<Wallet className="w-4 h-4" />} label="Нийт / Total" value={orderTotal ? `${orderTotal.toLocaleString()}₮` : null} />
+        <InfoRow icon={<NotebookPen className="w-4 h-4" />} label="Тэмдэглэл / Note" value={note} />
 
         {(!hasPhone || !hasAddress || !hasProduct) && (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-1.5">
             <div className="flex items-center gap-1.5 text-amber-800 font-semibold text-xs">
-              <AlertTriangle className="w-4 h-4" /> Анхааруулга
+              <AlertTriangle className="w-4 h-4" /> Анхааруулга / Warning
             </div>
-            {!hasPhone && <div className="text-xs text-amber-900">Утас нэхэж аваарай.</div>}
-            {!hasAddress && <div className="text-xs text-amber-900">Хаяг нэхэж аваарай.</div>}
-            {!hasProduct && <div className="text-xs text-amber-900">Бараа тодруулаарай.</div>}
+            {!hasPhone && <div className="text-xs text-amber-900">Утас нэхэж аваарай. / Ask for phone.</div>}
+            {!hasAddress && <div className="text-xs text-amber-900">Хаяг нэхэж аваарай. / Ask for address.</div>}
+            {!hasProduct && <div className="text-xs text-amber-900">Бараа тодруулаарай. / Confirm product.</div>}
           </div>
         )}
 
         {latestOrder?.erpOrderId && (
           <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5">
             <div className="text-xs font-semibold text-emerald-800 mb-0.5">
-              ERP захиалга
+              ERP захиалга / ERP order
             </div>
             <div className="text-sm font-mono text-emerald-900">
               #{latestOrder.erpOrderNumber || latestOrder.erpOrderId}
@@ -942,14 +942,14 @@ function CustomerInfoPanel({ conv, onReset, onCreateOrder }: CustomerPanelProps)
           onClick={onReset}
           className="w-full inline-flex items-center justify-center gap-2 text-sm px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700"
         >
-          <RotateCcw className="w-4 h-4" /> Дахин эхлэх
+          <RotateCcw className="w-4 h-4" /> Дахин эхлэх / Reset
         </button>
         {phone && (
           <a
             href={`tel:${phone}`}
             className="w-full inline-flex items-center justify-center gap-2 text-sm px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
           >
-            <Phone className="w-4 h-4" /> Дуудах
+            <Phone className="w-4 h-4" /> Дуудах / Call
           </a>
         )}
         {readyForOrder && !latestOrder?.erpOrderId && (
@@ -957,7 +957,7 @@ function CustomerInfoPanel({ conv, onReset, onCreateOrder }: CustomerPanelProps)
             onClick={onCreateOrder}
             className="w-full inline-flex items-center justify-center gap-2 text-sm px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
           >
-            <Package className="w-4 h-4" /> Захиалга үүсгэх
+            <Package className="w-4 h-4" /> Захиалга үүсгэх / Create order
           </button>
         )}
       </div>
@@ -1036,7 +1036,7 @@ function InfoRow({
           </div>
         ) : missing ? (
           <div className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5 mt-0.5">
-            <AlertTriangle className="w-3 h-3" /> {missingText || 'ДУТУУ'}
+            <AlertTriangle className="w-3 h-3" /> {missingText || 'ДУТУУ / MISSING'}
           </div>
         ) : (
           <div className="text-sm text-slate-400">—</div>

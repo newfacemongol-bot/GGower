@@ -50,7 +50,7 @@ export default function CommentStressTestPage() {
   }
 
   async function cleanup() {
-    if (!confirm('Коммент тест өгөгдлийг устгах уу?')) return;
+    if (!confirm('Коммент тест өгөгдлийг устгах уу? / Delete comment test data?')) return;
     setCleaning(true);
     setCleanupMsg(null);
     try {
@@ -58,8 +58,8 @@ export default function CommentStressTestPage() {
       const data = await res.json();
       if (res.ok) {
         const d = data.deleted ?? {};
-        setCleanupMsg(`${d.comments ?? 0} коммент, ${d.pages ?? 0} пэйж устгагдлаа`);
-      } else setCleanupMsg('Устгахад алдаа гарлаа');
+        setCleanupMsg(`${d.comments ?? 0} коммент / comments, ${d.pages ?? 0} пэйж / pages устгагдлаа / deleted`);
+      } else setCleanupMsg('Устгахад алдаа гарлаа / Error deleting');
     } finally {
       setCleaning(false);
     }
@@ -92,20 +92,20 @@ export default function CommentStressTestPage() {
           <MessageCircle className="w-5 h-5 text-teal-600" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Коммент бот стресс тест</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Коммент бот стресс тест / Comment bot stress test</h1>
           <p className="text-sm text-slate-600">
-            Бодит өгөгдөл дээр үндэслэсэн: 30 пэйж, 1,719 коммент/өдөр, 72/цаг оргил
+            Бодит өгөгдөл дээр үндэслэсэн: 30 пэйж, 1,719 коммент/өдөр, 72/цаг оргил / Based on real data: 30 pages, 1,719 comments/day, 72/hour peak
           </p>
         </div>
       </div>
 
       <div className="mb-6 border border-blue-200 bg-blue-50 rounded-lg p-4 text-sm text-blue-900">
-        <p className="font-medium mb-1">Тестийн тохируулга:</p>
+        <p className="font-medium mb-1">Тестийн тохируулга / Test configuration:</p>
         <ul className="list-disc list-inside space-y-0.5 text-blue-800">
-          <li>Бодит Facebook API дуудлага хийхгүй — бүх hide/like/reply mock</li>
-          <li>Коммент ID: "stress-comment-*", Пэйж ID: "stress-page-*"</li>
-          <li>30% утас / 20% сөрөг / 50% энгийн хольцтой</li>
-          <li>Шөнийн горим (22:00-09:00) дагалт шалгана</li>
+          <li>Бодит Facebook API дуудлага хийхгүй — бүх hide/like/reply mock / No real Facebook API calls — all hide/like/reply mocked</li>
+          <li>Коммент ID / Comment ID: "stress-comment-*", Пэйж ID / Page ID: "stress-page-*"</li>
+          <li>30% утас / 20% сөрөг / 50% энгийн хольцтой / 30% phone / 20% negative / 50% normal mix</li>
+          <li>Шөнийн горим (22:00-09:00) дагалт шалгана / Night mode (22:00-09:00) compliance checked</li>
         </ul>
       </div>
 
@@ -116,7 +116,7 @@ export default function CommentStressTestPage() {
           className="inline-flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-teal-700 disabled:opacity-50"
         >
           {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-          {running ? 'Ажиллаж байна...' : 'Коммент тест эхлэх'}
+          {running ? 'Ажиллаж байна... / Running...' : 'Коммент тест эхлэх / Start comment test'}
         </button>
 
         {results.length > 0 && !running && (
@@ -126,7 +126,7 @@ export default function CommentStressTestPage() {
             className="inline-flex items-center gap-2 border border-red-300 text-red-700 px-4 py-2.5 rounded-lg hover:bg-red-50 disabled:opacity-50"
           >
             {cleaning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            Коммент тест өгөгдөл устгах
+            Коммент тест өгөгдөл устгах / Delete comment test data
           </button>
         )}
 
@@ -135,26 +135,26 @@ export default function CommentStressTestPage() {
 
       {summary && (
         <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-          <SummaryCard label="30 пэйж даах чадвар" value={`${summary.percent}%`} sub={`${summary.pass}/${results.length} амжилттай`} />
+          <SummaryCard label="30 пэйж даах чадвар / 30-page capacity" value={`${summary.percent}%`} sub={`${summary.pass}/${results.length} амжилттай / passed`} />
           <SummaryCard
-            label="Өдөрт 1,719 коммент"
-            value={summary.canHandle ? 'ТИЙМ' : 'ҮГҮЙ'}
+            label="Өдөрт 1,719 коммент / 1,719 comments/day"
+            value={summary.canHandle ? 'ТИЙМ / YES' : 'ҮГҮЙ / NO'}
             valueClass={summary.canHandle ? 'text-emerald-600' : 'text-red-600'}
           />
           <SummaryCard
-            label="Facebook блок эрсдэл"
+            label="Facebook блок эрсдэл / Facebook block risk"
             value={summary.fbRisk}
             valueClass={summary.fbRisk === 'БАГА' ? 'text-emerald-600' : summary.fbRisk === 'ДУНД' ? 'text-amber-600' : 'text-red-600'}
           />
-          <SummaryCard label="Сөрөг илрүүлэлт" value={`${summary.negPct}%`} />
-          <SummaryCard label="Утас илрүүлэлт" value={`${summary.phonePct}%`} />
+          <SummaryCard label="Сөрөг илрүүлэлт / Negative detection" value={`${summary.negPct}%`} />
+          <SummaryCard label="Утас илрүүлэлт / Phone detection" value={`${summary.phonePct}%`} />
         </div>
       )}
 
       {results.length > 0 && (
         <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
           <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-            <h3 className="font-semibold text-slate-900 text-sm">Коммент тестийн үр дүн</h3>
+            <h3 className="font-semibold text-slate-900 text-sm">Коммент тестийн үр дүн / Comment test results</h3>
           </div>
           <ul className="divide-y divide-slate-100">
             {results.map(r => (

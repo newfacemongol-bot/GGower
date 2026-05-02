@@ -60,13 +60,13 @@ export default function Dashboard() {
   return (
     <div className="p-8 max-w-7xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Хяналтын самбар</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Хяналтын самбар / Dashboard</h1>
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-          Live · шинэчлэгдсэн {tick * 5}с өмнө
+          Live · шинэчлэгдсэн / updated {tick * 5}с / s ago
         </div>
       </div>
 
@@ -74,39 +74,39 @@ export default function Dashboard() {
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
           <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div className="text-sm text-red-800 flex-1">
-            <div className="font-semibold mb-0.5">Токен дууссан пэйж байна</div>
+            <div className="font-semibold mb-0.5">Токен дууссан пэйж байна / Expired token(s)</div>
             <div className="text-red-700">
-              {expiredTokens.map((p) => p.pageName).join(', ')} токен дууссан байна!{' '}
-              <a href="/admin/pages" className="underline font-semibold">Засах → /admin/pages</a>
+              {expiredTokens.map((p) => p.pageName).join(', ')} токен дууссан байна / token expired!{' '}
+              <a href="/admin/pages" className="underline font-semibold">Засах / Edit → /admin/pages</a>
             </div>
           </div>
         </div>
       )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <Stat label="Одоо идэвхтэй" value={stats?.activeNow ?? 0} icon={<Activity className="w-5 h-5" />} accent="emerald" />
-        <Stat label="Өнөөдрийн захиалга" value={stats?.todayOrders ?? 0} icon={<ShoppingBag className="w-5 h-5" />} />
+        <Stat label="Одоо идэвхтэй / Active now" value={stats?.activeNow ?? 0} icon={<Activity className="w-5 h-5" />} accent="emerald" />
+        <Stat label="Өнөөдрийн захиалга / Today's orders" value={stats?.todayOrders ?? 0} icon={<ShoppingBag className="w-5 h-5" />} />
         <Stat label="Conversion" value={`${stats?.conversionRate ?? 0}%`} icon={<TrendingUp className="w-5 h-5" />} accent="blue" />
-        <Stat label="Хүлээгдэж буй чат" value={stats?.pendingChats ?? 0} icon={<MessageCircle className="w-5 h-5" />} accent={stats && stats.pendingChats > 0 ? 'amber' : undefined} />
+        <Stat label="Хүлээгдэж буй чат / Pending chats" value={stats?.pendingChats ?? 0} icon={<MessageCircle className="w-5 h-5" />} accent={stats && stats.pendingChats > 0 ? 'amber' : undefined} />
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <Stat label="Өнөөдрийн коммент" value={stats?.totalComments ?? 0} icon={<MessageSquare className="w-5 h-5" />} />
-        <Stat label="Хариулсан" value={stats?.repliedComments ?? 0} icon={<CheckCircle2 className="w-5 h-5" />} />
-        <Stat label="Queue" value={stats?.queuedComments ?? 0} icon={<Clock className="w-5 h-5" />} />
-        <Stat label="Орхисон сагс" value={stats?.abandonedCarts ?? 0} icon={<ShoppingCart className="w-5 h-5" />} accent={stats && stats.abandonedCarts > 0 ? 'amber' : undefined} />
-        <Stat label="Амжилтгүй захиалга" value={stats?.failedOrders ?? 0} icon={<TriangleAlert className="w-5 h-5" />} accent={stats && stats.failedOrders > 0 ? 'rose' : undefined} />
+        <Stat label="Өнөөдрийн коммент / Today's comments" value={stats?.totalComments ?? 0} icon={<MessageSquare className="w-5 h-5" />} />
+        <Stat label="Хариулсан / Replied" value={stats?.repliedComments ?? 0} icon={<CheckCircle2 className="w-5 h-5" />} />
+        <Stat label="Дараалал / Queue" value={stats?.queuedComments ?? 0} icon={<Clock className="w-5 h-5" />} />
+        <Stat label="Орхисон сагс / Abandoned carts" value={stats?.abandonedCarts ?? 0} icon={<ShoppingCart className="w-5 h-5" />} accent={stats && stats.abandonedCarts > 0 ? 'amber' : undefined} />
+        <Stat label="Амжилтгүй захиалга / Failed orders" value={stats?.failedOrders ?? 0} icon={<TriangleAlert className="w-5 h-5" />} accent={stats && stats.failedOrders > 0 ? 'rose' : undefined} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-4 mb-8">
         <Stat
-          label="Яаралтай (URGENT)"
+          label="Яаралтай / Urgent"
           value={stats?.urgentCount ?? 0}
           icon={<TriangleAlert className="w-5 h-5" />}
           accent={stats && stats.urgentCount > 0 ? 'rose' : undefined}
         />
         <Stat
-          label="Гомдол (COMPLAINT)"
+          label="Гомдол / Complaint"
           value={stats?.complaintCount ?? 0}
           icon={<ShieldAlert className="w-5 h-5" />}
           accent={stats && stats.complaintCount > 0 ? 'amber' : undefined}
@@ -115,19 +115,19 @@ export default function Dashboard() {
 
       <div className="grid md:grid-cols-3 gap-4 mb-4">
         <Stat
-          label="2 цаг дотор хаагдах"
+          label="2 цаг дотор хаагдах / Closing in 2h"
           value={stats?.windowClosingIn2h ?? 0}
           icon={<Clock className="w-5 h-5" />}
           accent={stats && stats.windowClosingIn2h > 0 ? 'amber' : undefined}
         />
         <Stat
-          label="30 минут дотор хаагдах"
+          label="30 минут дотор хаагдах / Closing in 30 min"
           value={stats?.windowClosingIn30m ?? 0}
           icon={<TriangleAlert className="w-5 h-5" />}
           accent={stats && stats.windowClosingIn30m > 0 ? 'rose' : undefined}
         />
         <Stat
-          label="24 цаг хэтэрсэн"
+          label="24 цаг хэтэрсэн / Window expired"
           value={stats?.windowExpired ?? 0}
           icon={<ShieldAlert className="w-5 h-5" />}
           accent={stats && stats.windowExpired > 0 ? 'rose' : undefined}
@@ -136,16 +136,16 @@ export default function Dashboard() {
 
       <div className="grid md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Өнөөдрийн яриа</div>
+          <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Өнөөдрийн яриа / Today's chats</div>
           <div className="text-2xl font-bold text-slate-900">{stats?.todayConvs ?? 0}</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Өнөөдрийн батлагдсан</div>
+          <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Өнөөдрийн батлагдсан / Today's confirmed</div>
           <div className="text-2xl font-bold text-slate-900">{stats?.todayCompletedOrders ?? 0}</div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <div className="text-xs uppercase tracking-wide text-slate-500 mb-1 flex items-center gap-1">
-            <ShieldAlert className="w-3 h-3" /> Spam блоклосон
+            <ShieldAlert className="w-3 h-3" /> Spam блоклосон / blocked
           </div>
           <div className="text-2xl font-bold text-slate-900">{stats?.spamBlocked ?? 0}</div>
         </div>
@@ -153,18 +153,18 @@ export default function Dashboard() {
 
       <div className="bg-white rounded-xl border border-slate-200">
         <div className="px-6 py-4 border-b border-slate-200">
-          <h2 className="font-semibold text-slate-900">Пэйж статистик</h2>
+          <h2 className="font-semibold text-slate-900">Пэйж статистик / Page stats</h2>
         </div>
         <div className="divide-y divide-slate-200">
           {(stats?.pages ?? []).map((p) => (
             <div key={p.pageId} className="px-6 py-3 flex items-center justify-between">
               <span className="font-medium text-slate-900">{p.pageName}</span>
               <span className="text-sm text-slate-600">
-                {p.comments} коммент · {p.conversations} яриа
+                {p.comments} коммент / comments · {p.conversations} яриа / chats
               </span>
             </div>
           ))}
-          {!stats?.pages?.length && <div className="px-6 py-8 text-center text-slate-500 text-sm">Пэйж байхгүй байна</div>}
+          {!stats?.pages?.length && <div className="px-6 py-8 text-center text-slate-500 text-sm">Пэйж байхгүй байна / No pages</div>}
         </div>
       </div>
     </div>

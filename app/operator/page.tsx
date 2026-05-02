@@ -12,6 +12,93 @@ interface ConvItem {
   lastMessageAt: string; lastMessage?: string; status: string;
   sentiment?: string;
   isSpam?: boolean;
+  misunderstandCount?: number;
+  hasPhone?: boolean;
+  hasAddress?: boolean;
+  hasProduct?: boolean;
+  phone?: string | null;
+  address?: string | null;
+  productName?: string | null;
+  order?: {
+    id: string;
+    erpOrderId?: string | null;
+    erpOrderNumber?: string | null;
+    createdAt?: string;
+    address?: string;
+    phone?: string;
+    productName?: string | null;
+  } | null;
+}
+
+type TabKey = 'all' | 'ordered' | 'addr_missing' | 'phone_missing' | 'waiting' | 'handoff' | 'calls';
+
+const TAB_META: { key: TabKey; label: string; color: string; dot: string }[] = [
+  { key: 'all', label: 'Бүгд', color: 'text-slate-700 border-slate-700', dot: 'bg-slate-400' },
+  { key: 'ordered', label: 'Захиалга үүссэн', color: 'text-emerald-700 border-emerald-600', dot: 'bg-emerald-500' },
+  { key: 'addr_missing', label: 'Хаяг дутуу', color: 'text-amber-700 border-amber-500', dot: 'bg-amber-400' },
+  { key: 'phone_missing', label: 'Утас дутуу', color: 'text-blue-700 border-blue-500', dot: 'bg-blue-500' },
+  { key: 'waiting', label: 'Хариу хүлээж', color: 'text-red-700 border-red-500', dot: 'bg-red-500' },
+  { key: 'handoff', label: 'Оператортой холбогдох', color: 'text-fuchsia-700 border-fuchsia-500', dot: 'bg-fuchsia-500' },
+  { key: 'calls', label: 'Залгах жагсаалт', color: 'text-teal-700 border-teal-500', dot: 'bg-teal-500' },
+];
+
+function isToday(d: string | Date): boolean {
+  const x = new Date(d);
+  const n = new Date();
+  return x.getFullYear() === n.getFullYear() && x.getMonth() === n.getMonth() && x.getDate() === n.getDate();
+}
+
+function minutesSince(d: string | Date): number {
+  return Math.floor((Date.now() - new Date(d).getTime()) / 60000);
+}
+
+function relativeTime(d: string | Date): string {
+  const m = minutesSince(d);
+  if (m < 1) return 'дөнгөж сая';
+  if (m < 60) return `${m} мин өмнө`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} цаг өмнө`;
+  return `${Math.floor(h / 24)} өдөр өмнө`;
+}
+
+function isSilent(c: ConvItem): boolean {
+  if (!c.lastMessageAt) return false;
+  if (c.state === 'IDLE' || c.state === 'DONE') return false;
+  return minutesSince(c.lastMessageAt) >= 30;
+}
+
+function isUrgentFlag(c: ConvItem): boolean {
+  return c.isOperatorHandoff || (c.misunderstandCount ?? 0) >= 2 || c.sentiment === 'complaint' || c.sentiment === 'urgent';
+}
+
+function classifyConv(c: ConvItem): TabKey[] {
+  const tabs: TabKey[] = ['all'];
+  if (c.order?.erpOrderId) tabs.push('ordered');
+  if (c.hasPhone && !c.hasAddress) tabs.push('addr_missing');
+  if (c.hasAddress && !c.hasPhone) tabs.push('phone_missing');
+  if (isSilent(c)) tabs.push('waiting');
+  if (isUrgentFlag(c)) tabs.push('handoff');
+  if (c.hasPhone && !c.hasAddress && c.lastMessageAt && minutesSince(c.lastMessageAt) >= 60) tabs.push('calls');
+  return tabs;
+}
+
+function missingBadges(c: ConvItem): { cls: string; text: string }[] {
+  const badges: { cls: string; text: string }[] = [];
+  if (isUrgentFlag(c)) badges.push({ cls: 'bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-300', text: 'Оператор шаардлагатай' });
+  if (isSilent(c)) badges.push({ cls: 'bg-red-100 text-red-800 border border-red-300', text: 'Хариу байхгүй' });
+  if (c.hasPhone && !c.hasAddress) badges.push({ cls: 'bg-amber-100 text-amber-800 border border-amber-300', text: 'Хаяг дутуу' });
+  if (c.hasAddress && !c.hasPhone) badges.push({ cls: 'bg-blue-100 text-blue-800 border border-blue-300', text: 'Утас дутуу' });
+  if (!c.hasProduct && c.state !== 'IDLE' && c.state !== 'DONE') badges.push({ cls: 'bg-orange-100 text-orange-800 border border-orange-300', text: 'Бараа дутуу' });
+  return badges;
+}
+
+function convDotColor(c: ConvItem): string {
+  if (isUrgentFlag(c)) return 'bg-fuchsia-500';
+  if (isSilent(c)) return 'bg-red-500';
+  if (c.order?.erpOrderId) return 'bg-emerald-500';
+  if (c.hasPhone && !c.hasAddress) return 'bg-amber-400';
+  if (c.hasAddress && !c.hasPhone) return 'bg-blue-500';
+  return 'bg-slate-300';
 }
 
 export default function OperatorPage() {
@@ -28,6 +115,9 @@ export default function OperatorPage() {
   const [phones, setPhones] = useState<any[]>([]);
   const [hidden, setHidden] = useState<any[]>([]);
   const [phonesLoading, setPhonesLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabKey>('all');
+  const [lastRefreshAt, setLastRefreshAt] = useState<number>(Date.now());
+  const [now, setNow] = useState<number>(Date.now());
   const endRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -65,6 +155,7 @@ export default function OperatorPage() {
     }
     knownUrgentRef.current = currentUrgent;
     setList(items);
+    setLastRefreshAt(Date.now());
   }
 
   async function loadConv(id: string) {
@@ -76,7 +167,12 @@ export default function OperatorPage() {
 
   useEffect(() => {
     loadList();
-    const id = setInterval(loadList, 3000);
+    const id = setInterval(loadList, 10000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -185,74 +281,154 @@ export default function OperatorPage() {
 
   return (
     <div className="h-screen flex bg-slate-50">
-      <aside className="w-80 bg-white border-r border-slate-200 flex flex-col">
+      <aside className="w-96 bg-white border-r border-slate-200 flex flex-col">
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="font-bold text-slate-900">Чат</h2>
+          <div>
+            <h2 className="font-bold text-slate-900">Чат удирдлага</h2>
+            <div className="text-[11px] text-slate-500 mt-0.5">
+              Сүүлд шинэчлэгдсэн: {Math.max(0, Math.floor((now - lastRefreshAt) / 1000))} сек өмнө
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => { setShowPhones(true); loadPhones(); }}
               className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-              title="Шөнийн утаснууд"
+              title="Комментоос цуглуулсан"
             >
               <Phone className="w-3 h-3" /> Утас
             </button>
             <button onClick={logout} className="text-slate-500 hover:text-slate-900"><LogOut className="w-4 h-4" /></button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto divide-y divide-slate-100">
-          {list.map((c) => (
-            <div
-              key={c.id}
-              onClick={() => setActiveId(c.id)}
-              className={`w-full text-left px-4 py-3 hover:bg-slate-50 cursor-pointer ${activeId === c.id ? 'bg-slate-100' : ''}`}
-            >
-              <div className="flex items-center justify-between mb-0.5 gap-2">
-                <span className="font-medium text-slate-900 text-sm truncate">{c.senderName || 'Unknown'}</span>
-                <div className="flex items-center gap-1 shrink-0">
-                  {c.unreadCount > 0 && <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">{c.unreadCount}</span>}
-                </div>
-              </div>
-              <div className="text-xs text-slate-500 truncate">{c.lastMessage || '—'}</div>
-              <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
-                <span className="text-slate-400">{c.pageName}</span>
-                <StatusIcon status={c.status} handoff={c.isOperatorHandoff} />
-                {c.sentiment === 'urgent' && (
-                  <span className="inline-flex items-center gap-1 bg-red-600 text-white px-1.5 py-0.5 rounded font-semibold animate-pulse">
-                    URGENT
-                  </span>
-                )}
-                {c.sentiment === 'complaint' && (
-                  <span className="inline-flex items-center gap-1 bg-orange-500 text-white px-1.5 py-0.5 rounded font-semibold">
-                    COMPLAINT
-                  </span>
-                )}
-                {c.isSpam && (
-                  <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">
-                    <ShieldAlert className="w-3 h-3" /> Spam
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 mt-2">
+        <div className="border-b border-slate-200 overflow-x-auto">
+          <div className="flex gap-0 px-2 py-2 min-w-max">
+            {TAB_META.map((t) => {
+              const counts = list.filter((c) => classifyConv(c).includes(t.key));
+              const count = t.key === 'ordered'
+                ? counts.filter((c) => c.order?.createdAt && isToday(c.order.createdAt)).length
+                : counts.length;
+              const active = activeTab === t.key;
+              return (
                 <button
-                  onClick={(e) => resetConv(c.id, e)}
-                  className="inline-flex items-center gap-1 text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-100 text-slate-700"
-                  title="Харилцан яриаг дахин эхлүүлэх"
+                  key={t.key}
+                  onClick={() => setActiveTab(t.key)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md whitespace-nowrap transition ${active ? `bg-slate-100 font-semibold ${t.color.split(' ')[0]}` : 'text-slate-600 hover:bg-slate-50'}`}
                 >
-                  <RotateCcw className="w-3 h-3" /> Дахин эхлэх
+                  <span className={`w-2 h-2 rounded-full ${t.dot}`}></span>
+                  <span>{t.label}</span>
+                  <span className="bg-slate-200 text-slate-700 rounded-full px-1.5 text-[10px] font-semibold">{count}</span>
                 </button>
-                {c.isSpam && (
-                  <button
-                    onClick={(e) => unspam(c.id, e)}
-                    className="inline-flex items-center gap-1 text-xs px-2 py-1 border border-red-300 text-red-700 rounded hover:bg-red-50"
-                    title="Spam блокийг буцаах"
-                  >
-                    Буцаах
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-          {!list.length && <div className="p-8 text-center text-slate-500 text-sm">Чат байхгүй</div>}
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex-1 overflow-auto divide-y divide-slate-100">
+          {(() => {
+            let filtered = list.filter((c) => classifyConv(c).includes(activeTab));
+            if (activeTab === 'calls') {
+              filtered.sort((a, b) => new Date(a.lastMessageAt).getTime() - new Date(b.lastMessageAt).getTime());
+            } else {
+              filtered.sort((a, b) => {
+                const ua = isUrgentFlag(a) ? 0 : 1;
+                const ub = isUrgentFlag(b) ? 0 : 1;
+                if (ua !== ub) return ua - ub;
+                return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+              });
+            }
+
+            if (filtered.length === 0) {
+              return <div className="p-8 text-center text-slate-500 text-sm">Чат байхгүй</div>;
+            }
+
+            return filtered.map((c) => {
+              const badges = missingBadges(c);
+              const isCallTab = activeTab === 'calls';
+              const isOrderedTab = activeTab === 'ordered';
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => setActiveId(c.id)}
+                  className={`w-full text-left px-4 py-3 hover:bg-slate-50 cursor-pointer ${activeId === c.id ? 'bg-slate-100' : ''}`}
+                >
+                  <div className="flex items-center justify-between mb-0.5 gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${convDotColor(c)}`}></span>
+                      <span className="font-medium text-slate-900 text-sm truncate">{c.senderName || 'Unknown'}</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {c.unreadCount > 0 && <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">{c.unreadCount}</span>}
+                    </div>
+                  </div>
+                  {c.phone && (
+                    <div className={`${isCallTab ? 'text-base font-mono font-bold text-slate-900' : 'text-xs font-mono text-slate-700'}`}>
+                      {c.phone}
+                    </div>
+                  )}
+                  <div className="text-xs text-slate-500 truncate">
+                    {(c.lastMessage || '—').slice(0, 40)}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{relativeTime(c.lastMessageAt)}</div>
+
+                  {isOrderedTab && c.order && (
+                    <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1.5 text-xs space-y-0.5">
+                      <div className="font-semibold text-emerald-800">
+                        Захиалга #{c.order.erpOrderNumber || c.order.erpOrderId}
+                      </div>
+                      {c.order.productName && <div className="text-emerald-900 truncate">{c.order.productName}</div>}
+                      {c.order.address && <div className="text-emerald-700 truncate">{c.order.address}</div>}
+                    </div>
+                  )}
+
+                  {!isOrderedTab && (
+                    <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                      {badges.map((b, i) => (
+                        <span key={i} className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded font-medium ${b.cls}`}>
+                          {b.text}
+                        </span>
+                      ))}
+                      {c.isSpam && (
+                        <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium text-[10px]">
+                          <ShieldAlert className="w-3 h-3" /> Spam
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    {isCallTab && c.phone && (
+                      <a
+                        href={`tel:${c.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-teal-600 text-white rounded hover:bg-teal-700"
+                      >
+                        <Phone className="w-3 h-3" /> Дуудах
+                      </a>
+                    )}
+                    {isOrderedTab && c.order?.erpOrderId && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 border border-emerald-300 text-emerald-700 rounded">
+                        <FileText className="w-3 h-3" /> ERP #{c.order.erpOrderNumber || c.order.erpOrderId}
+                      </span>
+                    )}
+                    <button
+                      onClick={(e) => resetConv(c.id, e)}
+                      className="inline-flex items-center gap-1 text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-100 text-slate-700"
+                      title="Харилцан яриаг дахин эхлүүлэх"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Дахин эхлэх
+                    </button>
+                    {c.isSpam && (
+                      <button
+                        onClick={(e) => unspam(c.id, e)}
+                        className="inline-flex items-center gap-1 text-xs px-2 py-1 border border-red-300 text-red-700 rounded hover:bg-red-50"
+                      >
+                        Буцаах
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            });
+          })()}
         </div>
       </aside>
 

@@ -78,7 +78,25 @@ export async function POST(req: NextRequest) {
         } else {
           status = 'queued';
           reactToComment(page.accessToken, v.comment_id, 'LIKE').catch(() => false);
-          scheduledFor = new Date(Date.now() + 15000 + Math.floor(Math.random() * 45000));
+          const mnHour = (new Date().getUTCHours() + 8) % 24;
+          const isNight = mnHour >= 22 || mnHour < 9;
+          if (isNight) {
+            // Defer text reply to next morning 09:00 Mongolia time.
+            const nowMs = Date.now();
+            const mnNow = new Date(nowMs + 8 * 60 * 60 * 1000);
+            const next = new Date(Date.UTC(
+              mnNow.getUTCFullYear(),
+              mnNow.getUTCMonth(),
+              mnNow.getUTCDate(),
+              9, 0, 0,
+            ));
+            // if already past 09:00 MN "today" (i.e. it's 22:00-23:59), push to next day
+            if (mnHour >= 9) next.setUTCDate(next.getUTCDate() + 1);
+            // convert MN 09:00 -> UTC (subtract 8h)
+            scheduledFor = new Date(next.getTime() - 8 * 60 * 60 * 1000);
+          } else {
+            scheduledFor = new Date(Date.now() + 15000 + Math.floor(Math.random() * 45000));
+          }
         }
 
         await prisma.commentLead.create({

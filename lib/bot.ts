@@ -10,6 +10,7 @@ import { extractPriceRange } from './fuzzy';
 import { logAudit } from './audit';
 import { getBotMessage } from './bot-messages';
 import { detectNegative } from './negative-detect';
+import { isStressTestMode } from './stress-test-mode';
 
 const SPAM_ORDER_THRESHOLD = 5;
 const TOP_PRODUCT_CODES = ['0140', '0177', '0152', 'P-0117', '0127', '0134'];
@@ -228,9 +229,12 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
     await updateState(conv.id, 'IDLE', {}, []);
     return;
   }
-  const erpConfig: ErpConfigShape | null = page.erpConfig
+  let erpConfig: ErpConfigShape | null = page.erpConfig
     ? { apiUrl: page.erpConfig.apiUrl, apiKey: page.erpConfig.apiKey }
     : null;
+  if (!erpConfig && isStressTestMode()) {
+    erpConfig = { apiUrl: 'stress://local', apiKey: 'stress' };
+  }
 
   const detectedCode = extractProductCode(text);
   if (state === 'IDLE' && detectedCode && isOrderIntent(text) && erpConfig) {

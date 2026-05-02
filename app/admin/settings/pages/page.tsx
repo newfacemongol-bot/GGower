@@ -226,7 +226,7 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
   const [form, setForm] = useState<FormState>(initial);
   const [erpConfigId, setErpConfigId] = useState<string>(initialErpConfigId ?? '');
   const [verifying, setVerifying] = useState(false);
-  const [verified, setVerified] = useState(false);
+  const [verifyState, setVerifyState] = useState<'idle' | 'valid' | 'invalid'>('idle');
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
 
   async function verify() {
@@ -244,26 +244,28 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
       });
       const d = await r.json();
       if (d.ok) {
-        setVerified(true);
-        setVerifyMsg(`Хүчинтэй — ${d.name}`);
+        setVerifyState('valid');
+        setVerifyMsg(`Token хүчинтэй — хадгалах боломжтой${d.name ? ` (${d.name})` : ''}`);
         if (!form.pageName && d.name) setForm((f) => ({ ...f, pageName: d.name }));
         if (!form.pageId && d.id) setForm((f) => ({ ...f, pageId: d.id }));
-        toast.success(`Токен хүчинтэй: ${d.name}`);
+        toast.success('Token хүчинтэй');
       } else {
-        setVerified(false);
-        setVerifyMsg(d.error || 'Token буруу байна');
-        toast.error(d.error || 'Token буруу байна');
+        setVerifyState('invalid');
+        setVerifyMsg('Token хүчингүй — шинэ token үүсгэнэ үү');
+        toast.error('Token хүчингүй');
       }
     } catch {
-      setVerified(false);
-      setVerifyMsg('Холбогдсонгүй');
+      setVerifyState('invalid');
+      setVerifyMsg('Token хүчингүй — шинэ token үүсгэнэ үү');
       toast.error('Холбогдсонгүй');
     } finally {
       setVerifying(false);
     }
   }
 
-  const canSave = form.pageId.trim() && form.pageName.trim() && form.accessToken.trim() && (editing || verified);
+  const fieldsOk = !!(form.pageId.trim() && form.pageName.trim() && form.accessToken.trim());
+  const canAutoSave = fieldsOk && verifyState === 'valid';
+  const canForceSave = fieldsOk && verifyState === 'invalid';
 
   return (
     <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={onClose}>
@@ -294,7 +296,7 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
             <div className="flex gap-2">
               <input
                 value={form.accessToken}
-                onChange={(e) => { setForm({ ...form, accessToken: e.target.value }); setVerified(false); setVerifyMsg(null); }}
+                onChange={(e) => { setForm({ ...form, accessToken: e.target.value }); setVerifyState('idle'); setVerifyMsg(null); }}
                 className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
                 placeholder="EAA..."
               />
@@ -308,7 +310,7 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
               </button>
             </div>
             {verifyMsg && (
-              <div className={`text-xs mt-1.5 ${verified ? 'text-emerald-700' : 'text-red-700'}`}>{verifyMsg}</div>
+              <div className={`text-xs mt-1.5 ${verifyState === 'valid' ? 'text-emerald-700' : 'text-red-700'}`}>{verifyMsg}</div>
             )}
           </Field>
           <Field label="ERP">
@@ -331,15 +333,25 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
             Автомат хариу идэвхтэй
           </label>
         </div>
-        <div className="px-6 py-3 border-t border-slate-200 flex justify-end gap-2 bg-slate-50 rounded-b-xl">
+        <div className="px-6 py-3 border-t border-slate-200 flex justify-end gap-2 bg-slate-50 rounded-b-xl flex-wrap">
           <button onClick={onClose} className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">Болих</button>
-          <button
-            onClick={() => onSave(form, erpConfigId || null)}
-            disabled={!canSave}
-            className="px-4 py-2 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Хадгалах
-          </button>
+          {canForceSave ? (
+            <button
+              onClick={() => onSave(form, erpConfigId || null)}
+              className="px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+              title="Token хүчингүй байсан ч хадгална"
+            >
+              Баталгаажуулалтгүйгээр хадгалах
+            </button>
+          ) : (
+            <button
+              onClick={() => onSave(form, erpConfigId || null)}
+              disabled={!fieldsOk || (!editing && !canAutoSave)}
+              className="px-4 py-2 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Хадгалах
+            </button>
+          )}
         </div>
       </div>
     </div>

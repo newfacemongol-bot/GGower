@@ -5,12 +5,12 @@ export const dynamic = 'force-dynamic';
 
 async function verifyToken(token: string): Promise<{ ok: boolean; name?: string; id?: string; error?: string }> {
   try {
-    const r = await fetch(`https://graph.facebook.com/v18.0/me?fields=id,name&access_token=${encodeURIComponent(token)}`, {
+    const r = await fetch(`https://graph.facebook.com/me?access_token=${encodeURIComponent(token)}`, {
       cache: 'no-store',
     });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || d.error) {
-      return { ok: false, error: d?.error?.message || 'Token буруу байна' };
+    if (d?.error || !d?.id) {
+      return { ok: false, error: d?.error?.message || 'Token хүчингүй' };
     }
     return { ok: true, name: d.name, id: d.id };
   } catch (e: any) {

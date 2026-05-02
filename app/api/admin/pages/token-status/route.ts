@@ -6,12 +6,11 @@ export const dynamic = 'force-dynamic';
 
 async function checkToken(token: string): Promise<boolean> {
   try {
-    const r = await fetch(`https://graph.facebook.com/v18.0/me?access_token=${encodeURIComponent(token)}`, {
+    const r = await fetch(`https://graph.facebook.com/me?access_token=${encodeURIComponent(token)}`, {
       cache: 'no-store',
     });
-    if (!r.ok) return false;
     const d = await r.json().catch(() => ({}));
-    return !d.error && !!d.id;
+    return !d?.error && !!d?.id;
   } catch {
     return false;
   }

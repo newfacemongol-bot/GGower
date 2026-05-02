@@ -9,6 +9,7 @@ import { getDeliveryMessage, isBotEnabled, isNightMode } from './settings';
 import { extractPriceRange } from './fuzzy';
 import { logAudit } from './audit';
 import { getBotMessage } from './bot-messages';
+import { detectNegative } from './negative-detect';
 
 const SPAM_ORDER_THRESHOLD = 5;
 const SPAM_WINDOW_HOURS = 24;
@@ -126,6 +127,24 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
   const lowered = text.trim().toLowerCase();
   if (/оператор|хүн рүү|ажилтан|operator/.test(lowered)) {
     await handoffToOperator(page.accessToken, psid, conv.id, 'user_request');
+    return;
+  }
+
+  const negative = detectNegative(text);
+  if (negative) {
+    await prisma.conversation.update({
+      where: { id: conv.id },
+      data: { sentiment: negative.sentiment },
+    });
+    await botSay(page.accessToken, psid, conv.id, negative.response);
+    if (negative.resetToIdle) {
+      await updateState(conv.id, 'IDLE', {}, []);
+      return;
+    }
+    if (negative.handoff) {
+      await handoffToOperator(page.accessToken, psid, conv.id, `negative:${negative.category}`);
+      return;
+    }
     return;
   }
 

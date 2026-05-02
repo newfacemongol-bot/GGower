@@ -26,6 +26,8 @@ export async function GET() {
     failedOrders,
     abandonedCarts,
     spamBlocked,
+    complaintCount,
+    urgentCount,
   ] = await Promise.all([
     prisma.order.count({ where: { createdAt: { gte: startOfDay } } }),
     prisma.order.count({ where: { createdAt: { gte: startOfDay }, status: 'failed' } }),
@@ -44,6 +46,8 @@ export async function GET() {
     prisma.order.count({ where: { status: 'failed' } }),
     prisma.conversation.count({ where: { abandonedAt: { not: null }, state: 'CONFIRM' } }),
     prisma.spamBlock.count(),
+    prisma.conversation.count({ where: { sentiment: 'complaint', status: 'active' } }),
+    prisma.conversation.count({ where: { sentiment: 'urgent', status: 'active' } }),
   ]);
 
   const conversionRate = todayConvs > 0 ? Math.round((todayCompletedOrders / todayConvs) * 1000) / 10 : 0;
@@ -59,6 +63,8 @@ export async function GET() {
     failedOrders,
     abandonedCarts,
     spamBlocked,
+    complaintCount,
+    urgentCount,
     conversionRate,
     todayConvs,
     todayCompletedOrders,

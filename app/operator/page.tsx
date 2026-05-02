@@ -10,6 +10,7 @@ interface ConvItem {
   id: string; senderName?: string | null; pageName?: string;
   state: string; isOperatorHandoff: boolean; unreadCount: number;
   lastMessageAt: string; lastMessage?: string; status: string;
+  sentiment?: string;
   isSpam?: boolean;
 }
 
@@ -36,10 +37,29 @@ export default function OperatorPage() {
     }
   }, [conv?.id]);
 
+  const knownUrgentRef = useRef<Set<string>>(new Set());
   async function loadList() {
     const r = await fetch('/api/operator/conversations');
     const d = await r.json();
-    setList(d.items || []);
+    const items: ConvItem[] = d.items || [];
+    const currentUrgent = new Set(items.filter((i) => i.sentiment === 'urgent').map((i) => i.id));
+    for (const id of currentUrgent) {
+      if (!knownUrgentRef.current.has(id)) {
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.frequency.value = 880;
+          g.gain.value = 0.08;
+          o.start();
+          setTimeout(() => { o.stop(); ctx.close(); }, 300);
+        } catch {}
+        break;
+      }
+    }
+    knownUrgentRef.current = currentUrgent;
+    setList(items);
   }
 
   async function loadConv(id: string) {
@@ -153,6 +173,16 @@ export default function OperatorPage() {
               <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
                 <span className="text-slate-400">{c.pageName}</span>
                 <StatusIcon status={c.status} handoff={c.isOperatorHandoff} />
+                {c.sentiment === 'urgent' && (
+                  <span className="inline-flex items-center gap-1 bg-red-600 text-white px-1.5 py-0.5 rounded font-semibold animate-pulse">
+                    URGENT
+                  </span>
+                )}
+                {c.sentiment === 'complaint' && (
+                  <span className="inline-flex items-center gap-1 bg-orange-500 text-white px-1.5 py-0.5 rounded font-semibold">
+                    COMPLAINT
+                  </span>
+                )}
                 {c.isSpam && (
                   <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">
                     <ShieldAlert className="w-3 h-3" /> Spam

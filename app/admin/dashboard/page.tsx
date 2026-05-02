@@ -25,6 +25,8 @@ interface Stats {
   failedOrders: number;
   abandonedCarts: number;
   spamBlocked: number;
+  complaintCount: number;
+  urgentCount: number;
   conversionRate: number;
   todayConvs: number;
   todayCompletedOrders: number;
@@ -71,6 +73,21 @@ export default function Dashboard() {
         <Stat label="Queue" value={stats?.queuedComments ?? 0} icon={<Clock className="w-5 h-5" />} />
         <Stat label="Орхисон сагс" value={stats?.abandonedCarts ?? 0} icon={<ShoppingCart className="w-5 h-5" />} accent={stats && stats.abandonedCarts > 0 ? 'amber' : undefined} />
         <Stat label="Амжилтгүй захиалга" value={stats?.failedOrders ?? 0} icon={<TriangleAlert className="w-5 h-5" />} accent={stats && stats.failedOrders > 0 ? 'rose' : undefined} />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4 mb-8">
+        <Stat
+          label="Яаралтай (URGENT)"
+          value={stats?.urgentCount ?? 0}
+          icon={<TriangleAlert className="w-5 h-5" />}
+          accent={stats && stats.urgentCount > 0 ? 'rose' : undefined}
+        />
+        <Stat
+          label="Гомдол (COMPLAINT)"
+          value={stats?.complaintCount ?? 0}
+          icon={<ShieldAlert className="w-5 h-5" />}
+          accent={stats && stats.complaintCount > 0 ? 'amber' : undefined}
+        />
       </div>
 
       <div className="grid md:grid-cols-3 gap-4 mb-8">

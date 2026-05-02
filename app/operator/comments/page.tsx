@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Phone, CircleCheck as CheckCircle2, Circle as XCircle } from 'lucide-react';
+import { Phone, CircleCheck as CheckCircle2, Circle as XCircle, Archive, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CommentItem {
@@ -32,15 +32,26 @@ export default function OperatorCommentsPage() {
   const [status, setStatus] = useState('');
   const [hasPhone, setHasPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
 
   async function load() {
     setLoading(true);
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     if (hasPhone) params.set('hasPhone', hasPhone);
+    if (showArchived) params.set('archived', '1');
+    if (search) params.set('search', search);
+    params.set('page', String(page));
     const r = await fetch(`/api/operator/comments?${params}`);
     const d = await r.json();
     setItems(d.items || []);
+    if (typeof d.totalPages === 'number') setTotalPages(d.totalPages);
+    if (typeof d.total === 'number') setTotal(d.total);
     setLoading(false);
   }
 
@@ -48,7 +59,8 @@ export default function OperatorCommentsPage() {
     load();
     const id = setInterval(load, 5000);
     return () => clearInterval(id);
-  }, [status, hasPhone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, hasPhone, showArchived, page, search]);
 
   async function updateStatus(id: string, newStatus: string) {
     const r = await fetch(`/api/operator/comments/${id}`, {
@@ -69,7 +81,7 @@ export default function OperatorCommentsPage() {
       <div className="p-8 max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Коммент</h1>
-          <span className="text-sm text-slate-500">{items.length} бичлэг</span>
+          <span className="text-sm text-slate-500">{total.toLocaleString()} бичлэг</span>
         </div>
 
         <div className="flex flex-wrap gap-3 mb-4">
@@ -89,13 +101,36 @@ export default function OperatorCommentsPage() {
           </select>
           <select
             value={hasPhone}
-            onChange={(e) => setHasPhone(e.target.value)}
+            onChange={(e) => { setHasPhone(e.target.value); setPage(1); }}
             className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
           >
             <option value="">Бүгд</option>
             <option value="1">Утастай</option>
             <option value="0">Утасгүй</option>
           </select>
+          <form
+            onSubmit={(e) => { e.preventDefault(); setSearch(searchInput.trim()); setPage(1); }}
+            className="relative flex-1 min-w-[200px]"
+          >
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Текст, нэр, утасаар хайх..."
+              className="w-full pl-8 pr-8 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
+            />
+            {search && (
+              <button type="button" onClick={() => { setSearch(''); setSearchInput(''); setPage(1); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </form>
+          <button
+            onClick={() => { setShowArchived(v => !v); setPage(1); }}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition ${showArchived ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}
+          >
+            <Archive className="w-4 h-4" /> {showArchived ? 'Архив харах' : 'Архив харах'}
+          </button>
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-200">
@@ -156,7 +191,57 @@ export default function OperatorCommentsPage() {
             <div className="p-10 text-center text-slate-400 text-sm">Ачаалж байна...</div>
           )}
         </div>
+
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
       </div>
+    </div>
+  );
+}
+
+function Pagination({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+  const pages: (number | '...')[] = [];
+  const add = (n: number | '...') => pages.push(n);
+  const range = (a: number, b: number) => { for (let i = a; i <= b; i++) add(i); };
+  if (totalPages <= 7) range(1, totalPages);
+  else {
+    add(1);
+    if (page > 4) add('...');
+    const s = Math.max(2, page - 1);
+    const e = Math.min(totalPages - 1, page + 1);
+    range(s, e);
+    if (page < totalPages - 3) add('...');
+    add(totalPages);
+  }
+  return (
+    <div className="flex items-center justify-center gap-1 mt-4">
+      <button
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page <= 1}
+        className="w-8 h-8 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      {pages.map((p, i) =>
+        p === '...' ? (
+          <span key={`e${i}`} className="px-2 text-sm text-slate-400">…</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onChange(p)}
+            className={`min-w-[32px] h-8 px-2 text-sm rounded border ${p === page ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'}`}
+          >
+            {p}
+          </button>
+        ),
+      )}
+      <button
+        onClick={() => onChange(Math.min(totalPages, page + 1))}
+        disabled={page >= totalPages}
+        className="w-8 h-8 flex items-center justify-center rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
     </div>
   );
 }

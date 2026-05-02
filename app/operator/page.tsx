@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert, Phone, X, EyeOff, Eye, Trash2, MapPin, Package, Hash, Wallet, NotebookPen, Chrome as Home, Globe as Globe2, TriangleAlert as AlertTriangle } from 'lucide-react';
+import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert, Phone, X, EyeOff, Eye, Trash2, MapPin, Package, Hash, Wallet, NotebookPen, Chrome as Home, Globe as Globe2, TriangleAlert as AlertTriangle, Archive, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -142,6 +142,11 @@ export default function OperatorPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('all');
   const [lastRefreshAt, setLastRefreshAt] = useState<number>(Date.now());
   const [now, setNow] = useState<number>(Date.now());
+  const [showArchived, setShowArchived] = useState(false);
+  const [convPage, setConvPage] = useState(1);
+  const [convTotalPages, setConvTotalPages] = useState(1);
+  const [convSearch, setConvSearch] = useState('');
+  const [convSearchInput, setConvSearchInput] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -158,9 +163,14 @@ export default function OperatorPage() {
 
   const knownUrgentRef = useRef<Set<string>>(new Set());
   async function loadList() {
-    const r = await fetch('/api/operator/conversations');
+    const params = new URLSearchParams();
+    params.set('page', String(convPage));
+    if (showArchived) params.set('archived', '1');
+    if (convSearch) params.set('search', convSearch);
+    const r = await fetch(`/api/operator/conversations?${params}`);
     const d = await r.json();
     const items: ConvItem[] = d.items || [];
+    if (typeof d.totalPages === 'number') setConvTotalPages(d.totalPages);
     const currentUrgent = new Set(items.filter((i) => i.sentiment === 'urgent').map((i) => i.id));
     for (const id of currentUrgent) {
       if (!knownUrgentRef.current.has(id)) {
@@ -193,7 +203,8 @@ export default function OperatorPage() {
     loadList();
     const id = setInterval(loadList, 10000);
     return () => clearInterval(id);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convPage, showArchived, convSearch]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -322,6 +333,13 @@ export default function OperatorPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => { setShowArchived(v => !v); setConvPage(1); }}
+              className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border transition ${showArchived ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}
+              title="Архив харах"
+            >
+              <Archive className="w-3 h-3" /> {showArchived ? 'Архив' : 'Архив харах'}
+            </button>
+            <button
               onClick={() => { setShowPhones(true); loadPhones(); }}
               className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
               title="Комментоос цуглуулсан"
@@ -330,6 +348,29 @@ export default function OperatorPage() {
             </button>
             <button onClick={logout} className="text-slate-500 hover:text-slate-900"><LogOut className="w-4 h-4" /></button>
           </div>
+        </div>
+        <div className="px-4 py-2 border-b border-slate-200">
+          <form
+            onSubmit={(e) => { e.preventDefault(); setConvSearch(convSearchInput.trim()); setConvPage(1); }}
+            className="relative"
+          >
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <input
+              value={convSearchInput}
+              onChange={(e) => setConvSearchInput(e.target.value)}
+              placeholder="Хэрэглэгч/утас хайх..."
+              className="w-full pl-8 pr-8 py-1.5 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900"
+            />
+            {convSearch && (
+              <button
+                type="button"
+                onClick={() => { setConvSearch(''); setConvSearchInput(''); setConvPage(1); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </form>
         </div>
         <div className="border-b border-slate-200">
           <div className="flex flex-wrap gap-1 px-2 py-2">
@@ -464,6 +505,11 @@ export default function OperatorPage() {
             });
           })()}
         </div>
+        <Pagination
+          page={convPage}
+          totalPages={convTotalPages}
+          onChange={(p) => setConvPage(p)}
+        />
       </aside>
 
       <main className="flex-1 flex">
@@ -916,6 +962,55 @@ function CustomerInfoPanel({ conv, onReset, onCreateOrder }: CustomerPanelProps)
         )}
       </div>
     </aside>
+  );
+}
+
+function Pagination({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+  const pages: (number | '...')[] = [];
+  const add = (n: number | '...') => pages.push(n);
+  const range = (a: number, b: number) => { for (let i = a; i <= b; i++) add(i); };
+  if (totalPages <= 7) {
+    range(1, totalPages);
+  } else {
+    add(1);
+    if (page > 4) add('...');
+    const s = Math.max(2, page - 1);
+    const e = Math.min(totalPages - 1, page + 1);
+    range(s, e);
+    if (page < totalPages - 3) add('...');
+    add(totalPages);
+  }
+  return (
+    <div className="border-t border-slate-200 px-2 py-2 flex items-center justify-center gap-1 bg-white">
+      <button
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page <= 1}
+        className="w-7 h-7 flex items-center justify-center rounded border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ChevronLeft className="w-3.5 h-3.5" />
+      </button>
+      {pages.map((p, i) =>
+        p === '...' ? (
+          <span key={`e${i}`} className="px-1 text-xs text-slate-400">…</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onChange(p)}
+            className={`min-w-[28px] h-7 px-2 text-xs rounded border ${p === page ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+          >
+            {p}
+          </button>
+        ),
+      )}
+      <button
+        onClick={() => onChange(Math.min(totalPages, page + 1))}
+        disabled={page >= totalPages}
+        className="w-7 h-7 flex items-center justify-center rounded border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <ChevronRight className="w-3.5 h-3.5" />
+      </button>
+    </div>
   );
 }
 

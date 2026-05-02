@@ -449,6 +449,28 @@ function mongoliaDayStartUtc(d = new Date()): Date {
 }
 
 let lastMorningRunKey: string | null = null;
+let lastArchiveRunKey: string | null = null;
+
+async function processArchival() {
+  const mn = mongoliaTimeParts();
+  if (mn.hour !== 2) return;
+  const key = `${mn.y}-${mn.m}-${mn.day}`;
+  if (lastArchiveRunKey === key) return;
+  lastArchiveRunKey = key;
+
+  const cutoff = new Date(Date.now() - 30 * 24 * ONE_HOUR_MS);
+  const now = new Date();
+
+  const conv = await prisma.conversation.updateMany({
+    where: { isArchived: false, lastMessageAt: { lt: cutoff } },
+    data: { isArchived: true, archivedAt: now },
+  });
+  const cmt = await prisma.commentLead.updateMany({
+    where: { isArchived: false, queuedAt: { lt: cutoff } },
+    data: { isArchived: true, archivedAt: now },
+  });
+  console.log(`[archive] archived ${conv.count} conversations, ${cmt.count} comments (30d cutoff)`);
+}
 
 async function processMorningConfirmations() {
   const mn = mongoliaTimeParts();
@@ -526,6 +548,7 @@ async function main() {
       if (Date.now() - lastMorningCheck >= MORNING_CHECK_INTERVAL_MS) {
         lastMorningCheck = Date.now();
         await processMorningConfirmations().catch((e) => console.error('[morning] error:', e));
+        await processArchival().catch((e) => console.error('[archive] error:', e));
       }
     } catch (e) {
       console.error('[queue-worker] error:', e);

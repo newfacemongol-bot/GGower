@@ -1,16 +1,35 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+const PAGE_SIZE = 100;
+
+export async function GET(req: NextRequest) {
   const s = await getSession();
   if (!s) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const url = new URL(req.url);
+  const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
+  const archived = url.searchParams.get('archived') === '1';
+  const search = (url.searchParams.get('search') ?? '').trim();
+
+  const where: any = { isArchived: archived };
+  if (search) {
+    where.OR = [
+      { senderName: { contains: search, mode: 'insensitive' } },
+      { psid: { contains: search } },
+    ];
+  }
+
+  const total = await prisma.conversation.count({ where });
+
   const items = await prisma.conversation.findMany({
-    orderBy: [{ lastMessageAt: 'desc' }],
-    take: 300,
+    where,
+    orderBy: [{ createdAt: 'desc' }, { lastMessageAt: 'desc' }],
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
     include: {
       page: { select: { pageName: true } },
       messages: { orderBy: { timestamp: 'desc' }, take: 1 },
@@ -30,6 +49,7 @@ export async function GET() {
       },
     },
   });
+
   const sentimentRank: Record<string, number> = { urgent: 0, complaint: 1, negative: 2, neutral: 3 };
   items.sort((a, b) => {
     const ra = sentimentRank[a.sentiment] ?? 3;
@@ -37,11 +57,13 @@ export async function GET() {
     if (ra !== rb) return ra - rb;
     return b.lastMessageAt.getTime() - a.lastMessageAt.getTime();
   });
+
   const psids = items.map((c) => c.psid);
   const spamBlocks = psids.length
     ? await prisma.spamBlock.findMany({ where: { psid: { in: psids } } })
     : [];
   const spamSet = new Set(spamBlocks.map((b) => `${b.pageId}:${b.psid}`));
+
   return NextResponse.json({
     items: items.map((c) => {
       const ctx = (c.context as any) || {};
@@ -60,6 +82,8 @@ export async function GET() {
         lastMessage: c.messages[0]?.text,
         status: c.status,
         sentiment: c.sentiment,
+        isArchived: c.isArchived,
+        archivedAt: c.archivedAt,
         isSpam: spamSet.has(`${c.pageId}:${c.psid}`),
         hasPhone: !!ctx.phone,
         hasAddress: !!ctx.address,
@@ -80,5 +104,9 @@ export async function GET() {
           : null,
       };
     }),
+    page,
+    pageSize: PAGE_SIZE,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
   });
 }

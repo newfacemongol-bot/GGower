@@ -271,7 +271,10 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
     }
     if (slots.province && !ctx.province) ctx.province = slots.province;
     if (slots.district && !ctx.district) ctx.district = slots.district;
-    if (slots.address && !ctx.address && slots.address.length >= 3) ctx.address = slots.address;
+    const addressEligibleState = state === 'IDLE' || state === 'PRODUCT' || state === 'ADDRESS';
+    if (addressEligibleState && slots.address && !ctx.address && slots.address.length >= 10) {
+      ctx.address = slots.address;
+    }
   }
 
   await stepMachine({ page, erpConfig, convId: conv.id, psid, state, ctx, cart, text });

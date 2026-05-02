@@ -5,7 +5,7 @@ services:
       - "3000:3000"
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://chatbot:chatbot_password@db:5432/chatbot_db
+      DATABASE_URL: postgresql://chatbot:chatbot_password@db:5432/chatbot_db?connection_limit=25&pool_timeout=30
       TZ: Asia/Ulaanbaatar
     depends_on:
       db:
@@ -20,7 +20,7 @@ services:
     build: .
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://chatbot:chatbot_password@db:5432/chatbot_db
+      DATABASE_URL: postgresql://chatbot:chatbot_password@db:5432/chatbot_db?connection_limit=25&pool_timeout=30
       TZ: Asia/Ulaanbaatar
     depends_on:
       db:

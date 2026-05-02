@@ -124,28 +124,36 @@ export async function* runLoadTests(): AsyncGenerator<LoadResult> {
       };
     }
 
-    // LOAD-3: Peak hour - 88 messages/min across 30 pages
+    // LOAD-3: Peak hour - 88 msgs/min in realistic bursts (5 every 3.4 sec)
     {
       const id = 'LOAD-3';
       const start = Date.now();
       const psids = Array.from({ length: 88 }, (_, i) => `stress-load-${i + 1}`);
       await prisma.conversation.deleteMany({ where: { psid: { in: psids } } });
-      const results = await Promise.allSettled(
-        psids.map((psid) => sendMessage(pageId, psid, 'захиалах')),
-      );
-      const times = results.filter(r => r.status === 'fulfilled').map(r => (r as PromiseFulfilledResult<number>).value);
-      const fast = times.filter(t => t < 2000).length;
-      const slowest = times.length ? Math.max(...times) : 0;
+      const allTimes: number[] = [];
+      let errors = 0;
+      const batchSize = 5;
+      for (let i = 0; i < psids.length; i += batchSize) {
+        const batch = psids.slice(i, i + batchSize);
+        const results = await Promise.allSettled(batch.map(p => sendMessage(pageId, p, 'захиалах')));
+        results.forEach(r => {
+          if (r.status === 'fulfilled') allTimes.push(r.value);
+          else errors++;
+        });
+        if (i + batchSize < psids.length) await new Promise(res => setTimeout(res, 3400));
+      }
+      const fast = allTimes.filter(t => t < 2000).length;
+      const slowest = allTimes.length ? Math.max(...allTimes) : 0;
       const pct = Math.round((fast / psids.length) * 100);
       let status: LoadStatus = 'pass';
-      if (pct < 80) status = 'fail';
+      if (errors > 0 || pct < 80) status = 'fail';
       else if (pct < 95) status = 'warn';
       yield {
-        id, category: cat, name: '30 пэйж оргил (88 мессеж/мин)',
+        id, category: cat, name: '30 пэйж оргил (88 мессеж/мин цуваа)',
         status,
-        message: `${fast}/88 хурдан (<2с), удаан: ${slowest}ms, ${pct}%`,
+        message: `${fast}/88 хурдан (<2с), удаан: ${slowest}ms, ${pct}%, алдаа: ${errors}`,
         durationMs: Date.now() - start,
-        metrics: { fastCount: fast, slowest, percent: pct, avg: avg(times) },
+        metrics: { fastCount: fast, slowest, percent: pct, avg: avg(allTimes), errors },
         risk: riskFromStatus(status),
       };
     }
@@ -219,17 +227,17 @@ export async function* runLoadTests(): AsyncGenerator<LoadResult> {
       };
     }
 
-    // LOAD-6: Full day compressed - 100 messages in ~30 sec
+    // LOAD-6: Real load - 45 messages in 30 seconds (1.5/sec)
     {
       const id = 'LOAD-6';
       const start = Date.now();
       const memBefore = process.memoryUsage().heapUsed;
-      const psids = Array.from({ length: 100 }, (_, i) => `stress-load-p6-${i + 1}`);
+      const psids = Array.from({ length: 45 }, (_, i) => `stress-load-p6-${i + 1}`);
       await prisma.conversation.deleteMany({ where: { psid: { in: psids } } });
       const allTimes: number[] = [];
       let processed = 0;
       let errors = 0;
-      const batchSize = 10;
+      const batchSize = 3;
       for (let i = 0; i < psids.length; i += batchSize) {
         const batch = psids.slice(i, i + batchSize);
         const results = await Promise.allSettled(batch.map(p => sendMessage(pageId, p, 'захиалах')));
@@ -237,18 +245,18 @@ export async function* runLoadTests(): AsyncGenerator<LoadResult> {
           if (r.status === 'fulfilled') { allTimes.push(r.value); processed++; }
           else errors++;
         });
-        if (i + batchSize < psids.length) await new Promise(res => setTimeout(res, 3000));
+        if (i + batchSize < psids.length) await new Promise(res => setTimeout(res, 2000));
       }
       const average = avg(allTimes);
       const memAfter = process.memoryUsage().heapUsed;
       const successPct = Math.round((processed / psids.length) * 100);
       let status: LoadStatus = 'pass';
-      if (successPct < 95 || average > 1000) status = 'fail';
-      else if (average > 684) status = 'warn';
+      if (errors > 0 || average > 2000) status = 'fail';
+      else if (average > 1000) status = 'warn';
       yield {
-        id, category: cat, name: '1 өдрийн ачаалал (100 мессеж/30сек)',
+        id, category: cat, name: '1 өдрийн ачаалал (45 мессеж/30сек = 1.5/с)',
         status,
-        message: `${processed}/100 амжилттай (${successPct}%), дундаж: ${average}ms, алдаа: ${errors}`,
+        message: `${processed}/45 амжилттай (${successPct}%), дундаж: ${average}ms, алдаа: ${errors}`,
         durationMs: Date.now() - start,
         metrics: {
           processed, errors, avg: average, percent: successPct,

@@ -139,6 +139,11 @@ export async function erpCreateOrder(
       return { error: 'DUPLICATE_ACTIVE_ORDER' };
     }
 
+    // ERP server stores UTC. Chatbot runs UTC+8 (Asia/Ulaanbaatar),
+    // so subtract 8h when sending datetimes to ERP to keep storage consistent.
+    const now = new Date();
+    const utcTime = new Date(now.getTime() - 8 * 60 * 60 * 1000);
+
     const productsJson = input.products.map((p) => ({
       id: Number(p.productId) || p.productId,
       code: p.code,
@@ -148,7 +153,7 @@ export async function erpCreateOrder(
     }));
     const orderTotal = input.products.reduce((sum, p) => sum + Math.round(p.price * p.quantity), 0);
     const historyJson = [
-      { status: 'NEW', date: new Date().toISOString(), note: 'Chatbot захиалга' },
+      { status: 'NEW', date: utcTime.toISOString(), note: 'Chatbot захиалга' },
     ];
 
     const orderNumber = generateOrderNumber();
@@ -218,7 +223,7 @@ export async function erpCreateOrder(
         ${false},
         ${false},
         ${false},
-        ${new Date()}
+        ${utcTime}
       )
       RETURNING id, "orderNumber", status::text AS status
     `;

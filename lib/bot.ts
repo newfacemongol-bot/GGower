@@ -292,6 +292,15 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
 }
 
 async function nextMissingPrompt(ctx: Ctx, cart: CartItem[]): Promise<{ state: State; ask: string; quickReplies?: string[] } | null> {
+  // If a UB district has been captured, auto-set province so we never
+  // re-ask "Хүргэлт хаашаа вэ?" when the user already gave it implicitly.
+  if (ctx.district) {
+    const normalized = normalizeDistrict(ctx.district);
+    if (normalized && UB_DISTRICTS.includes(normalized)) {
+      ctx.district = normalized;
+      if (!ctx.province) ctx.province = 'Улаанбаатар';
+    }
+  }
   if (!ctx.selectedProduct && cart.length === 0) {
     return { state: 'PRODUCT', ask: 'Ямар бүтээгдэхүүн захиалах вэ? Код эсвэл нэрийг бичнэ үү.' };
   }
@@ -313,9 +322,8 @@ async function nextMissingPrompt(ctx: Ctx, cart: CartItem[]): Promise<{ state: S
   if (!ctx.address) {
     return { state: 'ADDRESS', ask: await getBotMessage('ask_address') };
   }
-  if (ctx.note === undefined) {
-    return { state: 'NOTE', ask: await getBotMessage('ask_note'), quickReplies: ['Байхгүй'] };
-  }
+  // NOTE step removed: default to empty note and skip entirely.
+  if (ctx.note === undefined) ctx.note = '';
   return null;
 }
 
@@ -521,6 +529,23 @@ async function stepMachine(a: StepArgs) {
 
       const intentWordsRe = /(авъя|авья|авна|авмаар|авии|авъя|захиалъя|захиалая|захиалах|awii|zahialay)/gi;
       const hasCustomerSlot = !!(slots.phone || slots.district || slots.province || ctx.address);
+
+      // If user sent phone + address-looking text together (no product code),
+      // treat as customer info and ask for the product instead of searching.
+      if (slots.phone && (ctx.address || looksLikeAddress) && !slots.productCode && !ctx.selectedProduct && cart.length === 0) {
+        const savedLines: string[] = [];
+        savedLines.push(`Утас: ${slots.phone}`);
+        const addr = ctx.address || slots.address || '';
+        if (addr) savedLines.push(`Хаяг: ${addr}`);
+        await botSay(
+          token,
+          psid,
+          convId,
+          `Хадгалсан:\n${savedLines.join('\n')}\n\nЯмар бараа авахыг хүсч байна вэ?\nБүтээгдэхүүний код эсвэл нэрийг бичнэ үү.`,
+        );
+        await updateState(convId, 'PRODUCT', ctx, cart);
+        return;
+      }
 
       if (hasCustomerSlot && !slots.productCode) {
         let leftover = t

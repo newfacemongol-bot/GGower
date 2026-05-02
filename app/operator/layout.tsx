@@ -18,8 +18,8 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
   }
 
   const links = [
-    { href: '/operator', label: 'Чат / Chat', icon: MessageSquare },
-    { href: '/operator/comments', label: 'Коммент / Comments', icon: MessagesSquare },
+    { href: '/operator', label: 'Chat', icon: MessageSquare },
+    { href: '/operator/comments', label: 'Comments', icon: MessagesSquare },
   ];
 
   return (

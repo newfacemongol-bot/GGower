@@ -326,7 +326,7 @@ export default function OperatorPage() {
       <aside className="w-96 bg-white border-r border-slate-200 flex flex-col">
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-slate-900">Чат удирдлага / Chat panel</h2>
+            <h2 className="font-bold text-slate-900">Operator Panel</h2>
             <div className="text-[11px] text-slate-500 mt-0.5">
               Сүүлд шинэчлэгдсэн / Last refreshed: {Math.max(0, Math.floor((now - lastRefreshAt) / 1000))} сек / s ago
             </div>
@@ -524,10 +524,10 @@ export default function OperatorPage() {
               </div>
               <div className="flex gap-2">
                 <button onClick={toggleHandoff} className="text-sm px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50">
-                  {conv.isOperatorHandoff ? 'Bot-д шилжүүлэх / Hand to bot' : 'Оператор авах / Take over'}
+                  {conv.isOperatorHandoff ? 'Switch to Bot' : 'Take Over'}
                 </button>
                 <button onClick={close} className="text-sm px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50">
-                  Дуусгах / Close
+                  Close Conversation
                 </button>
               </div>
             </header>

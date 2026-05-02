@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { replyToComment, reactToComment, sendText } from './lib/facebook';
 import { pickReplyByCategory, detectCommentCategory } from './lib/comment-filter';
 import { erpCreateOrder } from './lib/erp';
+import { getBotMessage } from './lib/bot-messages';
 
 const prisma = new PrismaClient();
 const POLL_INTERVAL_MS = 5000;
@@ -419,10 +420,92 @@ async function processOrderRetries() {
   }
 }
 
+function mongoliaTimeParts(d = new Date()): { y: number; m: number; day: number; hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Ulaanbaatar',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(d);
+  const map: Record<string, string> = {};
+  for (const p of parts) if (p.type !== 'literal') map[p.type] = p.value;
+  return {
+    y: Number(map.year),
+    m: Number(map.month),
+    day: Number(map.day),
+    hour: Number(map.hour === '24' ? '0' : map.hour),
+    minute: Number(map.minute),
+  };
+}
+
+function mongoliaDayStartUtc(d = new Date()): Date {
+  const { y, m, day } = mongoliaTimeParts(d);
+  // Mongolia is UTC+8 (no DST). Local midnight = UTC 16:00 previous day.
+  return new Date(Date.UTC(y, m - 1, day, 0, 0, 0) - 8 * 60 * 60 * 1000);
+}
+
+let lastMorningRunKey: string | null = null;
+
+async function processMorningConfirmations() {
+  const mn = mongoliaTimeParts();
+  if (mn.hour !== 9) return;
+  const key = `${mn.y}-${mn.m}-${mn.day}`;
+  if (lastMorningRunKey === key) return;
+  lastMorningRunKey = key;
+
+  const dayStartUtc = mongoliaDayStartUtc();
+  const nineAmUtc = new Date(dayStartUtc.getTime() + 9 * 60 * 60 * 1000);
+
+  const orders = await prisma.order.findMany({
+    where: {
+      createdAt: { gte: dayStartUtc, lt: nineAmUtc },
+      conversationId: { not: null },
+      conversation: { morningConfirmedAt: null },
+    },
+    include: {
+      conversation: { include: { page: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const seenConv = new Set<string>();
+  for (const order of orders) {
+    if (!order.conversationId) continue;
+    if (seenConv.has(order.conversationId)) continue;
+    seenConv.add(order.conversationId);
+
+    const conv = order.conversation;
+    if (!conv || !conv.page?.isActive || !conv.page?.accessToken) continue;
+
+    const products = Array.isArray(order.products) ? (order.products as any[]) : [];
+    const itemList = products.map((p) => `${p.productName ?? p.name} x ${p.quantity}ш`).join(', ');
+    const totalQty = products.reduce((s, p) => s + (Number(p.quantity) || 0), 0);
+    const productNameVal = products.length > 1 ? itemList : (products[0]?.productName ?? products[0]?.name ?? '');
+    const loc = [order.province, order.district, order.address].filter(Boolean).join(', ');
+
+    const template = await getBotMessage('morning_confirmation');
+    const msg = template
+      .replace(/\{productName\}/g, productNameVal)
+      .replace(/\{quantity\}/g, String(totalQty))
+      .replace(/\{address\}/g, loc);
+
+    const ok = await sendText(conv.page.accessToken, conv.psid, msg).catch(() => false);
+    if (ok) {
+      await prisma.message.create({ data: { conversationId: conv.id, text: msg, isFromBot: true } });
+      await prisma.conversation.update({
+        where: { id: conv.id },
+        data: { morningConfirmedAt: new Date() },
+      });
+      console.log(`[morning] confirmation sent to ${conv.psid}`);
+    }
+  }
+}
+
 async function main() {
   console.log('[queue-worker] starting; poll interval=', POLL_INTERVAL_MS, 'ms');
   let lastReminderRun = 0;
   let lastRetryRun = 0;
+  let lastMorningCheck = 0;
+  const MORNING_CHECK_INTERVAL_MS = 60_000;
   while (true) {
     try {
       await processOne();
@@ -434,6 +517,10 @@ async function main() {
       if (Date.now() - lastRetryRun >= RETRY_POLL_INTERVAL_MS) {
         lastRetryRun = Date.now();
         await processOrderRetries().catch((e) => console.error('[retry] error:', e));
+      }
+      if (Date.now() - lastMorningCheck >= MORNING_CHECK_INTERVAL_MS) {
+        lastMorningCheck = Date.now();
+        await processMorningConfirmations().catch((e) => console.error('[morning] error:', e));
       }
     } catch (e) {
       console.error('[queue-worker] error:', e);

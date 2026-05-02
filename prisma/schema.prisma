@@ -61,6 +61,7 @@ model Conversation {
   reminder23SentAt   DateTime?
   handoffReason      String?
   misunderstandCount Int      @default(0)
+  morningConfirmedAt DateTime?
   history            Json     @default("[]")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

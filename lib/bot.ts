@@ -777,17 +777,29 @@ async function submitOrder(page: any, erpConfig: ErpConfigShape | null, convId: 
   const itemList = cart.map((c) => `${c.product.name} x ${c.quantity}ш`).join(', ');
   const totalQty = cart.reduce((s, c) => s + c.quantity, 0);
   const firstProductName = cart[0]?.product.name ?? '';
-  const template = await getBotMessage('order_success');
+  const productNameVal = cart.length > 1 ? itemList : firstProductName;
+
+  const mnHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Ulaanbaatar', hour: 'numeric', hour12: false }).format(new Date()));
+  const isNightOrder = mnHour >= 0 && mnHour < 9;
+  const isAimag = !!(ctx.province && !isUB(ctx.province));
+
+  const templateKey = isNightOrder && !isAimag ? 'night_order_received' : 'order_success';
+  const template = await getBotMessage(templateKey);
   const successMsg = template
-    .replace(/\{productName\}/g, cart.length > 1 ? itemList : firstProductName)
+    .replace(/\{productName\}/g, productNameVal)
     .replace(/\{quantity\}/g, String(totalQty))
     .replace(/\{address\}/g, loc)
     .replace(/\{deliveryTime\}/g, when);
   await botSay(page.accessToken, psid, convId, successMsg, ['Шинэ захиалга', 'Захиалга хянах']);
 
-  if (ctx.province && !isUB(ctx.province)) {
-    const aimagMsg = await getBotMessage('aimag_payment');
-    if (aimagMsg) {
+  if (isAimag) {
+    const aimagTpl = await getBotMessage('aimag_payment');
+    if (aimagTpl) {
+      const aimagMsg = aimagTpl
+        .replace(/\{productName\}/g, productNameVal)
+        .replace(/\{quantity\}/g, String(totalQty))
+        .replace(/\{address\}/g, loc)
+        .replace(/\{deliveryTime\}/g, when);
       await botSay(page.accessToken, psid, convId, aimagMsg);
     }
   }

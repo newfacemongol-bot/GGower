@@ -18,6 +18,8 @@ export const BOT_MESSAGE_KEYS = [
   'order_cancelled',
   'aimag_payment',
   'phone_received_ask_product',
+  'night_order_received',
+  'morning_confirmation',
 ] as const;
 
 export type BotMessageKey = (typeof BOT_MESSAGE_KEYS)[number];
@@ -40,6 +42,8 @@ export const BOT_MESSAGE_DEFAULTS: Record<BotMessageKey, string> = {
   order_cancelled: 'Ойлголоо, захиалгыг цуцаллаа.\nДахин захиалах бол мессеж илгээнэ үү 😊',
   aimag_payment: '✅ Таны захиалга бүртгэгдлээ!\n📦 {productName} x {quantity}ш\n🚚 Маргааш унаанд тавьж өгнө\n💳 Урьдчилж төлбөр шилжүүлнэ үү\n📞 Асуух зүйл: 77774090\nБаярлалаа! 🙏',
   phone_received_ask_product: 'Утасны дугаарыг хүлээн авлаа! 😊\nЯмар бараа авахыг хүсч байна вэ?\nБүтээгдэхүүний код эсвэл нэрийг бичнэ үү.',
+  night_order_received: '✅ Таны захиалгыг хүлээн авлаа!\n📦 {productName} x {quantity}ш\n📍 {address}\n⏰ Өглөө таньтай холбогдох болно\nБаярлалаа! 🙏',
+  morning_confirmation: '🌅 Өглөөний мэнд!\n✅ Таны захиалга баталгаажлаа!\n📦 {productName} x {quantity}ш\n📍 {address}\n🚚 МАРГААШ 12:00-18:00 ЦАГИЙН ХООРОНД ХҮРГЭЖ ОЧНО\n📞 Хүргэлтийн өмнө холбоо барих болно\nБаярлалаа! 🙏',
 };
 
 export const BOT_MESSAGE_LABELS: Record<BotMessageKey, string> = {
@@ -60,6 +64,8 @@ export const BOT_MESSAGE_LABELS: Record<BotMessageKey, string> = {
   order_cancelled: 'Захиалга цуцалсан',
   aimag_payment: 'Орон нутгийн урьдчилгаа төлбөр',
   phone_received_ask_product: 'Утас хүлээн авсан / бараа асуух',
+  night_order_received: 'Шөнийн захиалга хүлээн авсан',
+  morning_confirmation: 'Өглөөний баталгаажуулалт',
 };
 
 const CACHE_TTL_MS = 5_000;

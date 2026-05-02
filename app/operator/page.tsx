@@ -324,42 +324,50 @@ export default function OperatorPage() {
   return (
     <div className="h-screen flex bg-slate-50">
       <aside className="w-96 bg-white border-r border-slate-200 flex flex-col">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-          <div>
-            <h2 className="font-bold text-slate-900">Operator Panel</h2>
-            <div className="text-[11px] text-slate-500 mt-0.5">
-              Сүүлд шинэчлэгдсэн / Last refreshed: {Math.max(0, Math.floor((now - lastRefreshAt) / 1000))} сек / s ago
+        <div className="px-5 py-4 border-b border-slate-200">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="font-bold text-slate-900 text-base">Inbox</h2>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => { setShowArchived(v => !v); setConvPage(1); }}
+                className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition ${showArchived ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                title="Архив харах / Show archive"
+              >
+                <Archive className="w-3 h-3" />
+                <span className="hidden xl:inline">{showArchived ? 'Archive' : 'Archive'}</span>
+              </button>
+              <button
+                onClick={() => { setShowPhones(true); loadPhones(); }}
+                className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
+                title="Customer phone numbers"
+              >
+                <Phone className="w-3 h-3" />
+                <span className="hidden xl:inline">Phones</span>
+              </button>
+              <button onClick={logout} className="p-1 rounded-md text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors" title="Гарах / Log out">
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { setShowArchived(v => !v); setConvPage(1); }}
-              className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border transition ${showArchived ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}
-              title="Архив харах / Show archive"
-            >
-              <Archive className="w-3 h-3" /> {showArchived ? 'Архив / Archive' : 'Архив харах / Show archive'}
-            </button>
-            <button
-              onClick={() => { setShowPhones(true); loadPhones(); }}
-              className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-              title="Customer phone numbers"
-            >
-              <Phone className="w-3 h-3" /> Phone
-            </button>
-            <button onClick={logout} className="text-slate-500 hover:text-slate-900"><LogOut className="w-4 h-4" /></button>
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+            </span>
+            Live · updated {Math.max(0, Math.floor((now - lastRefreshAt) / 1000))}s ago
           </div>
         </div>
-        <div className="px-4 py-2 border-b border-slate-200">
+        <div className="px-4 py-3 border-b border-slate-200">
           <form
             onSubmit={(e) => { e.preventDefault(); setConvSearch(convSearchInput.trim()); setConvPage(1); }}
             className="relative"
           >
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input
               value={convSearchInput}
               onChange={(e) => setConvSearchInput(e.target.value)}
-              placeholder="Хэрэглэгч/утас хайх / Search user or phone..."
-              className="w-full pl-8 pr-8 py-1.5 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900"
+              placeholder="Search name or phone..."
+              className="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
             />
             {convSearch && (
               <button
@@ -373,22 +381,24 @@ export default function OperatorPage() {
           </form>
         </div>
         <div className="border-b border-slate-200">
-          <div className="flex flex-wrap gap-1 px-2 py-2">
+          <div className="flex flex-wrap gap-1 px-3 py-2">
             {TAB_META.map((t) => {
               const counts = list.filter((c) => classifyConv(c).includes(t.key));
               const count = t.key === 'ordered'
                 ? counts.filter((c) => c.order?.createdAt && isToday(c.order.createdAt)).length
                 : counts.length;
               const active = activeTab === t.key;
+              const shortLabel = t.label.split(' / ')[0];
               return (
                 <button
                   key={t.key}
                   onClick={() => setActiveTab(t.key)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md whitespace-nowrap transition ${active ? `bg-slate-100 font-semibold ${t.color.split(' ')[0]}` : 'text-slate-600 hover:bg-slate-50'}`}
+                  title={t.label}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-full whitespace-nowrap transition-all ${active ? `bg-slate-900 text-white font-semibold shadow-sm` : 'text-slate-600 hover:bg-slate-100'}`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${t.dot}`}></span>
-                  <span>{t.label}</span>
-                  <span className="bg-slate-200 text-slate-700 rounded-full px-1.5 text-[10px] font-semibold">{count}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`}></span>
+                  <span>{shortLabel}</span>
+                  <span className={`rounded-full px-1.5 text-[10px] font-semibold ${active ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>{count}</span>
                 </button>
               );
             })}
@@ -409,39 +419,55 @@ export default function OperatorPage() {
             }
 
             if (filtered.length === 0) {
-              return <div className="p-8 text-center text-slate-500 text-sm">Чат байхгүй / No chats</div>;
+              return (
+                <div className="p-12 text-center">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                    <Bot className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <div className="text-sm font-medium text-slate-600">No chats</div>
+                  <div className="text-xs text-slate-400 mt-0.5">Чат байхгүй</div>
+                </div>
+              );
             }
 
             return filtered.map((c) => {
               const badges = missingBadges(c);
               const isCallTab = activeTab === 'calls';
               const isOrderedTab = activeTab === 'ordered';
+              const initials = (c.senderName || 'U').split(' ').map((s) => s[0]).slice(0, 2).join('').toUpperCase();
+              const isActive = activeId === c.id;
               return (
                 <div
                   key={c.id}
                   onClick={() => setActiveId(c.id)}
-                  className={`w-full text-left px-4 py-3 hover:bg-slate-50 cursor-pointer ${activeId === c.id ? 'bg-slate-100' : ''}`}
+                  className={`group relative w-full text-left px-4 py-3 cursor-pointer transition-all ${isActive ? 'bg-emerald-50/60' : 'hover:bg-slate-50'}`}
                 >
-                  <div className="flex items-center justify-between mb-0.5 gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${convDotColor(c)}`}></span>
-                      <span className="font-medium text-slate-900 text-sm truncate">{c.senderName || 'Unknown'}</span>
+                  {isActive && <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-500 rounded-r-full" />}
+                  <div className="flex items-start gap-3">
+                    <div className="relative shrink-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold ${isActive ? 'bg-emerald-500 text-white' : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600'}`}>
+                        {initials}
+                      </div>
+                      <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${convDotColor(c)}`}></span>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {c.unreadCount > 0 && <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">{c.unreadCount}</span>}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <span className="font-semibold text-slate-900 text-sm truncate">{c.senderName || 'Unknown'}</span>
+                        <span className="text-[10px] text-slate-400 shrink-0 tabular-nums">{relativeTime(c.lastMessageAt).split(' / ')[0]}</span>
+                      </div>
+                      {c.phone && (
+                        <div className={`${isCallTab ? 'text-sm font-mono font-bold text-slate-900' : 'text-[11px] font-mono text-slate-500'} truncate`}>
+                          {c.phone}
+                        </div>
+                      )}
+                      <div className="text-xs text-slate-500 truncate">
+                        {(c.lastMessage || '—').slice(0, 50)}
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <WindowPill lastMessageAt={c.lastMessageAt} now={now} />
+                        {c.unreadCount > 0 && <span className="bg-emerald-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1.5 flex items-center justify-center">{c.unreadCount}</span>}
+                      </div>
                     </div>
-                  </div>
-                  {c.phone && (
-                    <div className={`${isCallTab ? 'text-base font-mono font-bold text-slate-900' : 'text-xs font-mono text-slate-700'}`}>
-                      {c.phone}
-                    </div>
-                  )}
-                  <div className="text-xs text-slate-500 truncate">
-                    {(c.lastMessage || '—').slice(0, 40)}
-                  </div>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <div className="text-[11px] text-slate-400">{relativeTime(c.lastMessageAt)}</div>
-                    <WindowPill lastMessageAt={c.lastMessageAt} now={now} />
                   </div>
 
                   {isOrderedTab && c.order && (
@@ -513,21 +539,38 @@ export default function OperatorPage() {
       </aside>
 
       <main className="flex-1 flex">
-        {!conv && <div className="flex-1 flex items-center justify-center text-slate-500">Чат сонгоно уу / Select a chat</div>}
+        {!conv && (
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg mb-4">
+              <Bot className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-lg font-semibold text-slate-900 mb-1">Select a conversation</h2>
+            <p className="text-sm text-slate-500">Зүүн талаас чат сонгон харилцан яриаг үргэлжлүүлнэ үү</p>
+          </div>
+        )}
         {conv && (
           <>
             <div className="flex-1 flex flex-col min-w-0" style={{ flexBasis: '70%' }}>
             <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-slate-900">{conv.senderName || 'Unknown'}</div>
-                <div className="text-xs text-slate-500">{conv.page?.pageName} · State: {conv.state}</div>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+                  {(conv.senderName || 'U').split(' ').map((s: string) => s[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-900 truncate">{conv.senderName || 'Unknown'}</div>
+                  <div className="text-xs text-slate-500 flex items-center gap-1.5 truncate">
+                    <span className="truncate">{conv.page?.pageName}</span>
+                    <span className="text-slate-300">·</span>
+                    <StatusIcon status={conv.status} handoff={conv.isOperatorHandoff} />
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button onClick={toggleHandoff} className="text-sm px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50">
+              <div className="flex gap-2 shrink-0">
+                <button onClick={toggleHandoff} className={`text-sm px-3 py-1.5 rounded-lg transition-colors font-medium ${conv.isOperatorHandoff ? 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
                   {conv.isOperatorHandoff ? 'Switch to Bot' : 'Take Over'}
                 </button>
-                <button onClick={close} className="text-sm px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50">
-                  Close Conversation
+                <button onClick={close} className="text-sm px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700 font-medium">
+                  Close
                 </button>
               </div>
             </header>
@@ -556,7 +599,7 @@ export default function OperatorPage() {
                 </>
               )}
             </div>
-            <div className="flex-1 overflow-auto p-6 space-y-3">
+            <div className="flex-1 overflow-auto p-6 space-y-3 bg-gradient-to-b from-slate-50/50 to-slate-50">
               {conv.messages.map((m: any) => (
                 <MessageBubble key={m.id} message={m} />
               ))}
@@ -593,20 +636,20 @@ export default function OperatorPage() {
                     <button
                       onClick={() => setShowTemplates((v) => !v)}
                       disabled={expired}
-                      className="px-3 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                      title="Template"
+                      className="px-3 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 transition-colors"
+                      title="Templates"
                     >
                       <FileText className="w-4 h-4" />
                     </button>
                     <input value={text} onChange={(e) => setText(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && send()}
                       disabled={expired}
-                      placeholder={expired ? '24 цагийн цонх хаагдсан / 24-hour window closed — cannot send' : 'Мессеж бичих / Type a message...'}
-                      className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
+                      placeholder={expired ? '24-hour window closed' : 'Type a message...'}
+                      className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-all" />
                     <button
                       onClick={send}
-                      disabled={expired}
-                      className="bg-slate-900 text-white px-4 rounded-lg hover:bg-slate-800 disabled:bg-slate-400 disabled:cursor-not-allowed"
+                      disabled={expired || !text.trim()}
+                      className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white px-4 rounded-lg hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed transition-all shadow-sm"
                     >
                       <Send className="w-4 h-4" />
                     </button>
@@ -806,16 +849,16 @@ function MessageBubble({ message }: { message: any }) {
   const fromOp = message.isFromOperator;
   const fromUser = !fromBot && !fromOp;
   return (
-    <div className={`flex ${fromUser ? 'justify-start' : 'justify-end'}`}>
-      <div className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm ${
-        fromUser ? 'bg-white border border-slate-200 text-slate-900' :
-        fromOp ? 'bg-slate-900 text-white' :
-        'bg-blue-100 text-slate-900'
+    <div className={`flex ${fromUser ? 'justify-start' : 'justify-end'} group`}>
+      <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
+        fromUser ? 'bg-white border border-slate-200 text-slate-900 rounded-bl-md' :
+        fromOp ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-br-md' :
+        'bg-blue-50 border border-blue-100 text-slate-900 rounded-br-md'
       }`}>
-        <div className="flex items-center gap-1.5 text-xs opacity-70 mb-0.5">
-          {fromBot ? <><Bot className="w-3 h-3" /> Bot</> : fromOp ? <><User className="w-3 h-3" /> Оператор / Operator</> : null}
+        <div className={`flex items-center gap-1.5 text-[11px] mb-0.5 ${fromOp ? 'text-white/80' : 'text-slate-500'}`}>
+          {fromBot ? <><Bot className="w-3 h-3" /> Bot</> : fromOp ? <><User className="w-3 h-3" /> Operator</> : null}
         </div>
-        <div className="whitespace-pre-wrap">{message.text}</div>
+        <div className="whitespace-pre-wrap leading-relaxed">{message.text}</div>
       </div>
     </div>
   );
@@ -890,9 +933,9 @@ function CustomerInfoPanel({ conv, onReset, onCreateOrder }: CustomerPanelProps)
   return (
     <aside className="w-[30%] min-w-[280px] max-w-[420px] border-l border-slate-200 bg-white flex flex-col overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-slate-700" />
-          <h3 className="font-semibold text-slate-900 text-sm">Хэрэглэгчийн мэдээлэл / Customer info</h3>
+        <div>
+          <h3 className="font-semibold text-slate-900 text-sm">Customer info</h3>
+          <div className="text-[11px] text-slate-400">Хэрэглэгчийн мэдээлэл</div>
         </div>
         <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${statusCls}`}>
           <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle ${

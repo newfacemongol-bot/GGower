@@ -1,4 +1,5 @@
 import { erpDb, resolveErpImageUrl } from './erp-db';
+import { isStressTestMode } from './stress-test-mode';
 
 export interface ErpProduct {
   id: string;
@@ -102,6 +103,13 @@ export async function erpCreateOrder(
   _cfg: ErpConfigShape,
   input: ErpOrderInput,
 ): Promise<{ id?: string; orderNumber?: string; status?: string; error?: string }> {
+  if (isStressTestMode()) {
+    console.log('[erpCreateOrder] STRESS TEST - order not created in ERP', {
+      phone: input.customerPhone,
+      chatbotOrderId: input.chatbotOrderId,
+    });
+    return { id: 'test-999', orderNumber: 'stress-test-001', status: 'NEW' };
+  }
   try {
     if (!input.customerPhone || !input.address || !input.province) {
       console.error('[erpCreateOrder] Missing required fields', {

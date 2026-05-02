@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { isStressTestMode } from './stress-test-mode';
 
 const GRAPH = 'https://graph.facebook.com/v19.0';
 const GRAPH_V25 = 'https://graph.facebook.com/v25.0';
@@ -39,6 +40,9 @@ export function verifySignature(payload: string, signature: string | null): bool
 }
 
 export async function sendMessage(pageAccessToken: string, psid: string, message: any): Promise<boolean> {
+  if (isStressTestMode() || psid.startsWith('stress-test-')) {
+    return true;
+  }
   try {
     const res = await fetch(`${GRAPH}/me/messages?access_token=${pageAccessToken}`, {
       method: 'POST',
@@ -57,6 +61,7 @@ export async function sendMessage(pageAccessToken: string, psid: string, message
 }
 
 export async function sendSenderAction(pageAccessToken: string, psid: string, action: 'typing_on' | 'typing_off' | 'mark_seen'): Promise<void> {
+  if (isStressTestMode() || psid.startsWith('stress-test-')) return;
   try {
     await fetch(`${GRAPH}/me/messages?access_token=${pageAccessToken}`, {
       method: 'POST',
@@ -124,6 +129,9 @@ export async function reactToComment(
 }
 
 export async function fetchUserProfile(pageAccessToken: string, psid: string): Promise<{ first_name?: string; last_name?: string } | null> {
+  if (isStressTestMode() || psid.startsWith('stress-test-')) {
+    return { first_name: 'Stress', last_name: 'Test' };
+  }
   try {
     const res = await fetch(`${GRAPH}/${psid}?fields=first_name,last_name&access_token=${pageAccessToken}`);
     if (!res.ok) return null;

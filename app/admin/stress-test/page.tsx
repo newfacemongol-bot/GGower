@@ -47,13 +47,16 @@ export default function StressTestPage() {
     const percent = Math.round((pass / loadResults.length) * 100);
     const dangerCount = loadResults.filter(r => r.risk === 'danger').length;
     const cautionCount = loadResults.filter(r => r.risk === 'caution').length;
+    const fb = loadResults.find(r => r.id === 'LOAD-7');
     let fbRisk: 'БАГА' | 'ДУНД' | 'ӨНДӨР' = 'БАГА';
-    if (dangerCount > 0) fbRisk = 'ӨНДӨР';
+    if (fb && fb.risk === 'danger') fbRisk = 'ӨНДӨР';
+    else if (dangerCount > 0) fbRisk = 'ӨНДӨР';
     else if (cautionCount > 1) fbRisk = 'ДУНД';
-    let recommendation = 'Систем 30 пэйжийн ачаалалд бэлэн байна.';
-    if (fail > 0) recommendation = 'Шалгалт амжилтгүй боллоо. Системийн гүйцэтгэлийг сайжруулна уу.';
+    const canHandle = fail === 0;
+    let recommendation = 'Систем өдөрт 30,810 мессеж боловсруулах чадвартай.';
+    if (fail > 0) recommendation = 'Систем бүрэн ачааллыг даахгүй. Гүйцэтгэлийг сайжруулна уу.';
     else if (percent < 100) recommendation = 'Анхааруулгатай тестүүдийг шалгана уу.';
-    return { pass, fail, percent, fbRisk, recommendation };
+    return { pass, fail, percent, fbRisk, recommendation, canHandle };
   }, [loadResults]);
 
   const totals = useMemo(() => {
@@ -351,11 +354,18 @@ export default function StressTestPage() {
         </div>
 
         {loadSummary && (
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="border border-slate-200 rounded-lg p-4 bg-white">
-              <div className="text-xs text-slate-500 mb-1">30 пэйж ачаалал даах</div>
+              <div className="text-xs text-slate-500 mb-1">Бодит 30 пэйж даах чадвар</div>
               <div className="text-2xl font-bold text-slate-900">{loadSummary.percent}%</div>
               <div className="text-xs text-slate-500 mt-1">{loadSummary.pass}/{loadResults.length} амжилттай</div>
+            </div>
+            <div className="border border-slate-200 rounded-lg p-4 bg-white">
+              <div className="text-xs text-slate-500 mb-1">Өдөрт 30,810 мессеж</div>
+              <div className={`text-2xl font-bold ${loadSummary.canHandle ? 'text-emerald-600' : 'text-red-600'}`}>
+                {loadSummary.canHandle ? 'ТИЙМ' : 'ҮГҮЙ'}
+              </div>
+              <div className="text-xs text-slate-500 mt-1">Боловсруулах боломжтой</div>
             </div>
             <div className="border border-slate-200 rounded-lg p-4 bg-white">
               <div className="text-xs text-slate-500 mb-1">Facebook блок эрсдэл</div>

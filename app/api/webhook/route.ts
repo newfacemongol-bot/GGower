@@ -6,6 +6,7 @@ import { isSpamComment } from '@/lib/comment-filter';
 import { extractPhone, extractProductCode } from '@/lib/product-code';
 import { reactToComment, hideComment } from '@/lib/facebook';
 import { isNegativeComment } from '@/lib/negative-comment';
+import { ensureDefaultSettings } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  await ensureDefaultSettings();
   const raw = await req.text();
   const sig = req.headers.get('x-hub-signature-256');
   if (process.env.FACEBOOK_APP_SECRET && !verifySignature(raw, sig)) {

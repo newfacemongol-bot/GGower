@@ -1,5 +1,39 @@
 import { prisma } from './prisma';
 
+const DEFAULT_SETTINGS: Record<string, string> = {
+  bot_enabled: 'true',
+  night_mode_enabled: 'true',
+  night_start_hour: '22',
+  night_end_hour: '9',
+  hourly_comment_limit: '40',
+  daily_comment_limit: '500',
+  auto_reply_enabled: 'true',
+  hourlyCommentLimit: '40',
+  nightModeEnabled: 'true',
+  nightModeStart: '22',
+  nightModeEnd: '9',
+  botEnabled: 'true',
+  autoReplyEnabled: 'true',
+  dailyCommentLimit: '500',
+};
+
+let defaultsEnsured = false;
+export async function ensureDefaultSettings(): Promise<void> {
+  if (defaultsEnsured) return;
+  try {
+    for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+      await prisma.setting.upsert({
+        where: { key },
+        create: { key, value },
+        update: {},
+      });
+    }
+    defaultsEnsured = true;
+  } catch {
+    /* swallow - don't break startup on transient DB errors */
+  }
+}
+
 export async function getSetting(key: string, defaultValue = ''): Promise<string> {
   const s = await prisma.setting.findUnique({ where: { key } });
   return s?.value ?? defaultValue;

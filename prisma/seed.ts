@@ -49,9 +49,18 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   delivery_end_hour: '16',
   night_mode_enabled: 'true',
   night_start_hour: '22',
-  night_end_hour: '8',
+  night_end_hour: '9',
   reaction_enabled: 'false',
-  hourly_comment_limit: '60',
+  hourly_comment_limit: '40',
+  daily_comment_limit: '500',
+  auto_reply_enabled: 'true',
+  hourlyCommentLimit: '40',
+  nightModeEnabled: 'true',
+  nightModeStart: '22',
+  nightModeEnd: '9',
+  botEnabled: 'true',
+  autoReplyEnabled: 'true',
+  dailyCommentLimit: '500',
 };
 
 const DEFAULT_REPLIES = [

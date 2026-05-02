@@ -38,10 +38,10 @@ export default function PagesAdminPage() {
     try {
       const r = await fetch(`/api/admin/pages/${p.id}/persistent-menu`, { method: 'POST' });
       const d = await r.json().catch(() => ({}));
-      if (r.ok && d.ok) toast.success('Persistent Menu тохируулагдлаа');
-      else toast.error(d.error || 'Тохируулж чадсангүй');
+      if (r.ok && d.ok) toast.success('Persistent Menu тохируулагдлаа / configured');
+      else toast.error(d.error || 'Тохируулж чадсангүй / Could not configure');
     } catch {
-      toast.error('Холбогдсонгүй');
+      toast.error('Холбогдсонгүй / Connection failed');
     } finally {
       setMenuBusy(null);
     }
@@ -74,8 +74,8 @@ export default function PagesAdminPage() {
 
   async function softDelete(p: PageItem) {
     const r = await fetch(`/api/admin/pages/${p.id}`, { method: 'DELETE' });
-    if (r.ok) { toast.success('Пэйж устгагдлаа (идэвхгүй)'); setDeleting(null); load(); }
-    else toast.error('Алдаа гарлаа');
+    if (r.ok) { toast.success('Пэйж устгагдлаа / Page deactivated'); setDeleting(null); load(); }
+    else toast.error('Алдаа гарлаа / Error');
   }
 
   const expired = items.filter((p) => p.isActive && tokenStatus[p.id] === 'expired');
@@ -83,9 +83,9 @@ export default function PagesAdminPage() {
   return (
     <div className="p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Facebook пэйж</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Facebook пэйж / Facebook pages</h1>
         <button onClick={() => setCreating(true)} className="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition">
-          <Plus className="w-4 h-4" /> Шинэ пэйж нэмэх
+          <Plus className="w-4 h-4" /> Шинэ пэйж нэмэх / Add page
         </button>
       </div>
 
@@ -93,9 +93,9 @@ export default function PagesAdminPage() {
         <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
           <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div className="text-sm text-red-800">
-            <div className="font-semibold mb-0.5">Токен дууссан пэйж байна</div>
+            <div className="font-semibold mb-0.5">Токен дууссан пэйж байна / Expired token(s)</div>
             <div className="text-red-700">
-              {expired.map((p) => p.pageName).join(', ')} — шинэ access token оруулна уу.
+              {expired.map((p) => p.pageName).join(', ')} — шинэ access token оруулна уу / please enter a new access token.
             </div>
           </div>
         </div>
@@ -113,10 +113,10 @@ export default function PagesAdminPage() {
                     <div className="font-semibold text-slate-900">{p.pageName}</div>
                     <TokenBadge status={ts} />
                     <span className={`text-xs px-2 py-0.5 rounded font-medium ${p.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
-                      {p.isActive ? 'Идэвхтэй' : 'Идэвхгүй'}
+                      {p.isActive ? 'Идэвхтэй / Active' : 'Идэвхгүй / Inactive'}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded font-medium ${p.autoReplyEnabled ? 'bg-sky-100 text-sky-700' : 'bg-slate-200 text-slate-600'}`}>
-                      Автомат хариу: {p.autoReplyEnabled ? 'ON' : 'OFF'}
+                      Автомат хариу / Auto-reply: {p.autoReplyEnabled ? 'ON' : 'OFF'}
                     </span>
                   </div>
                   <div className="text-xs text-slate-500">ID: <span className="font-mono">{p.pageId}</span></div>
@@ -127,33 +127,33 @@ export default function PagesAdminPage() {
                     onClick={() => configureMenu(p)}
                     disabled={menuBusy === p.id}
                     className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700 disabled:opacity-50"
-                    title="Messenger-ийн доод цэсэнд 'Захиалга хянах' товчийг тохируулна"
+                    title="Messenger-ийн доод цэсэнд 'Захиалга хянах' товчийг тохируулна / Configure the 'Track order' button in Messenger persistent menu"
                   >
-                    {menuBusy === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MenuIcon className="w-3.5 h-3.5" />} Persistent Menu тохируулах
+                    {menuBusy === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MenuIcon className="w-3.5 h-3.5" />} Persistent Menu тохируулах / Configure
                   </button>
                   <button
                     onClick={() => setEditing(p)}
                     className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700"
                   >
-                    <Pencil className="w-3.5 h-3.5" /> Засах
+                    <Pencil className="w-3.5 h-3.5" /> Засах / Edit
                   </button>
                   <button
                     onClick={() => setDeleting(p)}
                     className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-red-300 text-red-700 rounded-lg hover:bg-red-50"
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> Устгах
+                    <Trash2 className="w-3.5 h-3.5" /> Устгах / Delete
                   </button>
                 </div>
               </div>
             </div>
           );
         })}
-        {!items.length && <div className="p-8 text-center text-slate-500 text-sm">Пэйж байхгүй байна</div>}
+        {!items.length && <div className="p-8 text-center text-slate-500 text-sm">Пэйж байхгүй байна / No pages</div>}
       </div>
 
       {creating && (
         <PageFormModal
-          title="Шинэ пэйж нэмэх"
+          title="Шинэ пэйж нэмэх / Add new page"
           initial={EMPTY_FORM}
           erps={erps}
           onClose={() => setCreating(false)}
@@ -163,15 +163,15 @@ export default function PagesAdminPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ ...form, erpConfigId: erpConfigId || null }),
             });
-            if (r.ok) { toast.success('Пэйж нэмэгдлээ'); setCreating(false); load(); }
-            else toast.error('Алдаа гарлаа');
+            if (r.ok) { toast.success('Пэйж нэмэгдлээ / Page added'); setCreating(false); load(); }
+            else toast.error('Алдаа гарлаа / Error');
           }}
         />
       )}
 
       {editing && (
         <PageFormModal
-          title={`Засах: ${editing.pageName}`}
+          title={`Засах / Edit: ${editing.pageName}`}
           initial={{
             pageId: editing.pageId,
             pageName: editing.pageName,
@@ -193,18 +193,18 @@ export default function PagesAdminPage() {
                 erpConfigId: erpConfigId || null,
               }),
             });
-            if (r.ok) { toast.success('Хадгалагдлаа'); setEditing(null); load(); }
-            else toast.error('Алдаа гарлаа');
+            if (r.ok) { toast.success('Хадгалагдлаа / Saved'); setEditing(null); load(); }
+            else toast.error('Алдаа гарлаа / Error');
           }}
         />
       )}
 
       {deleting && (
         <ConfirmModal
-          title="Пэйж устгах уу?"
-          message={`${deleting.pageName} пэйжийг устгах уу?\nЭнэ пэйжийн бүх чат, коммент устахгүй — гэхдээ bot хариулахаа зогсоно.`}
-          confirmText="Тийм, устгах"
-          cancelText="Болих"
+          title="Пэйж устгах уу? / Delete page?"
+          message={`${deleting.pageName} пэйжийг устгах уу? / Delete this page?\nЭнэ пэйжийн бүх чат, коммент устахгүй — гэхдээ bot хариулахаа зогсоно.\nAll chats and comments remain, but the bot will stop replying.`}
+          confirmText="Тийм, устгах / Yes, delete"
+          cancelText="Болих / Cancel"
           onCancel={() => setDeleting(null)}
           onConfirm={() => softDelete(deleting)}
         />
@@ -217,20 +217,20 @@ function TokenBadge({ status }: { status: TokenStatus }) {
   if (status === 'valid') {
     return (
       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
-        <ShieldCheck className="w-3 h-3" /> Хүчинтэй
+        <ShieldCheck className="w-3 h-3" /> Хүчинтэй / Valid
       </span>
     );
   }
   if (status === 'expired') {
     return (
       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 font-medium">
-        <ShieldAlert className="w-3 h-3" /> Дууссан
+        <ShieldAlert className="w-3 h-3" /> Дууссан / Expired
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
-      <ShieldQuestion className="w-3 h-3" /> Шалгаагүй
+      <ShieldQuestion className="w-3 h-3" /> Шалгаагүй / Unchecked
     </span>
   );
 }
@@ -254,7 +254,7 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
 
   async function verify() {
     if (!form.accessToken.trim()) {
-      toast.error('Токен оруулна уу');
+      toast.error('Токен оруулна уу / Please enter a token');
       return;
     }
     setVerifying(true);
@@ -268,19 +268,19 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
       const d = await r.json();
       if (d.ok) {
         setVerifyState('valid');
-        setVerifyMsg(`Token хүчинтэй — хадгалах боломжтой${d.name ? ` (${d.name})` : ''}`);
+        setVerifyMsg(`Token хүчинтэй — хадгалах боломжтой / Token is valid — ready to save${d.name ? ` (${d.name})` : ''}`);
         if (!form.pageName && d.name) setForm((f) => ({ ...f, pageName: d.name }));
         if (!form.pageId && d.id) setForm((f) => ({ ...f, pageId: d.id }));
-        toast.success('Token хүчинтэй');
+        toast.success('Token хүчинтэй / Token valid');
       } else {
         setVerifyState('invalid');
-        setVerifyMsg('Token хүчингүй — шинэ token үүсгэнэ үү');
-        toast.error('Token хүчингүй');
+        setVerifyMsg('Token хүчингүй — шинэ token үүсгэнэ үү / Token invalid — please generate a new one');
+        toast.error('Token хүчингүй / Token invalid');
       }
     } catch {
       setVerifyState('invalid');
-      setVerifyMsg('Token хүчингүй — шинэ token үүсгэнэ үү');
-      toast.error('Холбогдсонгүй');
+      setVerifyMsg('Token хүчингүй — шинэ token үүсгэнэ үү / Token invalid — please generate a new one');
+      toast.error('Холбогдсонгүй / Connection failed');
     } finally {
       setVerifying(false);
     }
@@ -303,7 +303,7 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
               value={form.pageName}
               onChange={(e) => setForm({ ...form, pageName: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-              placeholder="жишээ: Nomi UB"
+              placeholder="Жишээ / Example: Nomi UB"
             />
           </Field>
           <Field label="Page ID">
@@ -312,7 +312,7 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
               onChange={(e) => setForm({ ...form, pageId: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
               disabled={!!editing}
-              placeholder="жишээ: 1234567890"
+              placeholder="Жишээ / Example: 1234567890"
             />
           </Field>
           <Field label="Access Token">
@@ -329,7 +329,7 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
                 className="inline-flex items-center gap-1 px-3 py-2 bg-slate-900 text-white text-sm rounded-lg hover:bg-slate-800 disabled:opacity-50"
               >
                 {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                Шалгах
+                Шалгах / Verify
               </button>
             </div>
             {verifyMsg && (
@@ -342,7 +342,7 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
               onChange={(e) => setErpConfigId(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
             >
-              <option value="">(Сонгоогүй)</option>
+              <option value="">(Сонгоогүй / Not selected)</option>
               {erps.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
             </select>
           </Field>
@@ -353,18 +353,18 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
               onChange={(e) => setForm({ ...form, autoReplyEnabled: e.target.checked })}
               className="w-4 h-4"
             />
-            Автомат хариу идэвхтэй
+            Автомат хариу идэвхтэй / Auto-reply enabled
           </label>
         </div>
         <div className="px-6 py-3 border-t border-slate-200 flex justify-end gap-2 bg-slate-50 rounded-b-xl flex-wrap">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">Болих</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">Болих / Cancel</button>
           {canForceSave ? (
             <button
               onClick={() => onSave(form, erpConfigId || null)}
               className="px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
-              title="Token хүчингүй байсан ч хадгална"
+              title="Token хүчингүй байсан ч хадгална / Save even if token is invalid"
             >
-              Баталгаажуулалтгүйгээр хадгалах
+              Баталгаажуулалтгүйгээр хадгалах / Save without verification
             </button>
           ) : (
             <button
@@ -372,7 +372,7 @@ function PageFormModal({ title, initial, initialErpConfigId, erps, editing, onCl
               disabled={!fieldsOk || (!editing && !canAutoSave)}
               className="px-4 py-2 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Хадгалах
+              Хадгалах / Save
             </button>
           )}
         </div>

@@ -13,11 +13,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <NavLink href="/admin/dashboard" icon={<LayoutDashboard className="w-4 h-4" />}>Хяналтын самбар</NavLink>
           <NavLink href="/admin/comments" icon={<MessageCircle className="w-4 h-4" />}>Коммент</NavLink>
           <NavLink href="/admin/queue" icon={<ListOrdered className="w-4 h-4" />}>Queue</NavLink>
-          <NavLink href="/admin/settings" icon={<Settings className="w-4 h-4" />}>Тохиргоо</NavLink>
+          <NavLink href="/admin/settings" icon={<Settings className="w-4 h-4" />}>Тохиргоо / Settings</NavLink>
           <NavLink href="/admin/settings/erp" icon={<Database className="w-4 h-4" />}>ERP</NavLink>
-          <NavLink href="/admin/settings/pages" icon={<Facebook className="w-4 h-4" />}>Facebook Пэйж</NavLink>
-          <NavLink href="/admin/settings/templates" icon={<FileText className="w-4 h-4" />}>Бэлэн хариу</NavLink>
-          <NavLink href="/admin/settings/messages" icon={<MessageSquare className="w-4 h-4" />}>Бот мессежүүд</NavLink>
+          <NavLink href="/admin/settings/pages" icon={<Facebook className="w-4 h-4" />}>Facebook Пэйж / Pages</NavLink>
+          <NavLink href="/admin/settings/templates" icon={<FileText className="w-4 h-4" />}>Бэлэн хариу / Templates</NavLink>
+          <NavLink href="/admin/settings/messages" icon={<MessageSquare className="w-4 h-4" />}>Бот мессежүүд / Bot messages</NavLink>
           <NavLink href="/admin/stress-test" icon={<FlaskConical className="w-4 h-4" />}>Стресс тест</NavLink>
           <NavLink href="/admin/comment-stress-test" icon={<MessageCircle className="w-4 h-4" />}>Коммент стресс тест</NavLink>
         </nav>

@@ -14,7 +14,7 @@ export default function LogoutButton() {
       className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100"
     >
       <LogOut className="w-4 h-4" />
-      Гарах
+      Гарах / Log out
     </button>
   );
 }

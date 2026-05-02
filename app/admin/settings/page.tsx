@@ -19,7 +19,7 @@ export default function SettingsPage() {
 
   async function save() {
     const r = await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings }) });
-    if (r.ok) toast.success('Хадгалагдлаа'); else toast.error('Алдаа');
+    if (r.ok) toast.success('Хадгалагдлаа / Saved'); else toast.error('Алдаа / Error');
   }
 
   async function addReply() {
@@ -42,38 +42,38 @@ export default function SettingsPage() {
   return (
     <div className="p-8 max-w-4xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-6">Ерөнхий тохиргоо</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-6">Ерөнхий тохиргоо / General settings</h1>
         <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-          <Row label="Bot идэвхтэй">
-            <Select value={s.bot_enabled ?? 'true'} onChange={(v) => set('bot_enabled', v)} options={[['true','Тийм'],['false','Үгүй']]} />
+          <Row label="Bot идэвхтэй / Bot enabled">
+            <Select value={s.bot_enabled ?? 'true'} onChange={(v) => set('bot_enabled', v)} options={[['true','Тийм / Yes'],['false','Үгүй / No']]} />
           </Row>
-          <Row label="Шөнийн горим">
-            <Select value={s.night_mode_enabled ?? 'true'} onChange={(v) => set('night_mode_enabled', v)} options={[['true','Тийм'],['false','Үгүй']]} />
+          <Row label="Шөнийн горим / Night mode">
+            <Select value={s.night_mode_enabled ?? 'true'} onChange={(v) => set('night_mode_enabled', v)} options={[['true','Тийм / Yes'],['false','Үгүй / No']]} />
           </Row>
-          <Row label="Шөнийн горим эхлэх цаг">
+          <Row label="Шөнийн горим эхлэх цаг / Night start hour">
             <NumInput value={s.night_start_hour ?? '22'} onChange={(v) => set('night_start_hour', v)} />
           </Row>
-          <Row label="Шөнийн горим дуусах цаг">
+          <Row label="Шөнийн горим дуусах цаг / Night end hour">
             <NumInput value={s.night_end_hour ?? '8'} onChange={(v) => set('night_end_hour', v)} />
           </Row>
           <Row label="Reaction">
-            <Select value={s.reaction_enabled ?? 'false'} onChange={(v) => set('reaction_enabled', v)} options={[['true','Тийм'],['false','Үгүй']]} />
+            <Select value={s.reaction_enabled ?? 'false'} onChange={(v) => set('reaction_enabled', v)} options={[['true','Тийм / Yes'],['false','Үгүй / No']]} />
           </Row>
-          <Row label="Цагт хариу хязгаар (default)">
+          <Row label="Цагт хариу хязгаар / Hourly reply limit (default)">
             <NumInput value={s.hourly_comment_limit ?? '60'} onChange={(v) => set('hourly_comment_limit', v)} />
           </Row>
-          <Row label="Хүргэлт эхлэх цаг">
+          <Row label="Хүргэлт эхлэх цаг / Delivery start hour">
             <NumInput value={s.delivery_start_hour ?? '8'} onChange={(v) => set('delivery_start_hour', v)} />
           </Row>
-          <Row label="Хүргэлт дуусах цаг">
+          <Row label="Хүргэлт дуусах цаг / Delivery end hour">
             <NumInput value={s.delivery_end_hour ?? '16'} onChange={(v) => set('delivery_end_hour', v)} />
           </Row>
-          <button onClick={save} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm">Хадгалах</button>
+          <button onClick={save} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm">Хадгалах / Save</button>
         </div>
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-4">Автомат хариу хувилбарууд</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-4">Автомат хариу хувилбарууд / Auto-reply variants</h2>
         <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-200">
           {replies.map((r) => (
             <div key={r.id} className="p-4 flex items-start gap-3">
@@ -81,7 +81,7 @@ export default function SettingsPage() {
                 className="flex-1 px-3 py-2 border border-slate-300 rounded text-sm" rows={2} />
               <label className="inline-flex items-center gap-2 text-sm text-slate-700 pt-2">
                 <input type="checkbox" checked={r.isActive} onChange={(e) => updateReply(r.id, { isActive: e.target.checked })} />
-                Идэвхтэй
+                Идэвхтэй / Active
               </label>
               <button onClick={() => deleteReply(r.id)} className="p-2 text-slate-500 hover:text-red-600">
                 <Trash2 className="w-4 h-4" />
@@ -89,10 +89,10 @@ export default function SettingsPage() {
             </div>
           ))}
           <div className="p-4 flex gap-3">
-            <textarea value={newReply} onChange={(e) => setNewReply(e.target.value)} placeholder="Шинэ хариу нэмэх... {name} хувьсагч ашиглаж болно"
+            <textarea value={newReply} onChange={(e) => setNewReply(e.target.value)} placeholder="Шинэ хариу нэмэх / Add new reply... {name} хувьсагч / variable"
               className="flex-1 px-3 py-2 border border-slate-300 rounded text-sm" rows={2} />
             <button onClick={addReply} className="self-start inline-flex items-center gap-1.5 bg-slate-900 text-white px-3 py-2 rounded text-sm">
-              <Plus className="w-4 h-4" /> Нэмэх
+              <Plus className="w-4 h-4" /> Нэмэх / Add
             </button>
           </div>
         </div>

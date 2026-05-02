@@ -25,7 +25,7 @@ export default function TemplatesPage() {
 
   const create = async () => {
     if (!title.trim() || !text.trim()) {
-      toast.error('Гарчиг болон текст оруулна уу');
+      toast.error('Гарчиг болон текст оруулна уу / Title and text are required');
       return;
     }
     setLoading(true);
@@ -36,16 +36,16 @@ export default function TemplatesPage() {
     });
     setLoading(false);
     if (r.ok) {
-      toast.success('Template нэмэгдлээ');
+      toast.success('Template нэмэгдлээ / Template added');
       setTitle(''); setText(''); setShortcut('');
       load();
     } else {
-      toast.error('Алдаа гарлаа');
+      toast.error('Алдаа гарлаа / Error');
     }
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Устгах уу?')) return;
+    if (!confirm('Устгах уу? / Delete?')) return;
     await fetch(`/api/admin/templates/${id}`, { method: 'DELETE' });
     load();
   };
@@ -53,28 +53,28 @@ export default function TemplatesPage() {
   return (
     <div className="p-8 max-w-4xl">
       <h1 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-        <FileText className="w-6 h-6" /> Бэлэн хариу (Template)
+        <FileText className="w-6 h-6" /> Бэлэн хариу / Templates
       </h1>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-        <h2 className="font-semibold text-slate-900 mb-3">Шинэ template</h2>
+        <h2 className="font-semibold text-slate-900 mb-3">Шинэ template / New template</h2>
         <div className="grid md:grid-cols-2 gap-3 mb-3">
           <input
             className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
-            placeholder="Гарчиг (ж: Хүргэлтийн хариу)"
+            placeholder="Гарчиг / Title (e.g. Delivery reply)"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
           <input
             className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
-            placeholder="Товчлол (ж: /del)"
+            placeholder="Товчлол / Shortcut (e.g. /del)"
             value={shortcut}
             onChange={(e) => setShortcut(e.target.value)}
           />
         </div>
         <textarea
           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3 min-h-[100px]"
-          placeholder="Хариултын текст..."
+          placeholder="Хариултын текст... / Reply text..."
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
@@ -83,13 +83,13 @@ export default function TemplatesPage() {
           disabled={loading}
           className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 disabled:opacity-50 inline-flex items-center gap-2"
         >
-          <Plus className="w-4 h-4" /> Нэмэх
+          <Plus className="w-4 h-4" /> Нэмэх / Add
         </button>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-200">
         {items.length === 0 && (
-          <div className="p-8 text-center text-slate-500 text-sm">Template байхгүй байна</div>
+          <div className="p-8 text-center text-slate-500 text-sm">Template байхгүй байна / No templates</div>
         )}
         {items.map((t) => (
           <div key={t.id} className="p-4 flex items-start justify-between gap-4">
@@ -99,14 +99,14 @@ export default function TemplatesPage() {
                 {t.shortcut && (
                   <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">{t.shortcut}</span>
                 )}
-                <span className="text-xs text-slate-400">хэрэглэсэн: {t.useCount}</span>
+                <span className="text-xs text-slate-400">хэрэглэсэн / used: {t.useCount}</span>
               </div>
               <p className="text-sm text-slate-600 whitespace-pre-wrap break-words">{t.text}</p>
             </div>
             <button
               onClick={() => remove(t.id)}
               className="text-rose-600 hover:bg-rose-50 p-2 rounded-lg"
-              aria-label="Устгах"
+              aria-label="Устгах / Delete"
             >
               <Trash2 className="w-4 h-4" />
             </button>

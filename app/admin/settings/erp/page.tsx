@@ -25,8 +25,8 @@ export default function ErpPage() {
     const r = await fetch('/api/admin/erp', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
     });
-    if (r.ok) { toast.success('ERP нэмэгдлээ'); setCreating(false); setForm({ name: '', apiUrl: '', apiKey: '', description: '' }); load(); }
-    else toast.error('Алдаа гарлаа');
+    if (r.ok) { toast.success('ERP нэмэгдлээ / ERP added'); setCreating(false); setForm({ name: '', apiUrl: '', apiKey: '', description: '' }); load(); }
+    else toast.error('Алдаа гарлаа / Error');
   }
 
   async function toggle(id: string, isActive: boolean) {
@@ -37,28 +37,28 @@ export default function ErpPage() {
   async function testConn(id: string) {
     const r = await fetch(`/api/admin/erp/${id}?action=test`, { method: 'POST' });
     const d = await r.json();
-    if (d.ok) toast.success('Холболт ажиллаж байна');
-    else toast.error(`Холболтгүй: ${d.error}`);
+    if (d.ok) toast.success('Холболт ажиллаж байна / Connection OK');
+    else toast.error(`Холболтгүй / No connection: ${d.error}`);
   }
 
   return (
     <div className="p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">ERP тохиргоо</h1>
+        <h1 className="text-2xl font-bold text-slate-900">ERP тохиргоо / ERP settings</h1>
         <button onClick={() => setCreating(true)} className="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800">
-          <Plus className="w-4 h-4" /> ERP нэмэх
+          <Plus className="w-4 h-4" /> ERP нэмэх / Add ERP
         </button>
       </div>
 
       {creating && (
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 space-y-3">
-          <Input label="Нэр" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+          <Input label="Нэр / Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
           <Input label="API URL" value={form.apiUrl} onChange={(v) => setForm({ ...form, apiUrl: v })} placeholder="https://erp1.mn" />
           <Input label="API Key" value={form.apiKey} onChange={(v) => setForm({ ...form, apiKey: v })} />
-          <Input label="Тайлбар" value={form.description} onChange={(v) => setForm({ ...form, description: v })} />
+          <Input label="Тайлбар / Description" value={form.description} onChange={(v) => setForm({ ...form, description: v })} />
           <div className="flex gap-2 pt-2">
-            <button onClick={create} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm">Хадгалах</button>
-            <button onClick={() => setCreating(false)} className="px-4 py-2 text-sm text-slate-600">Болих</button>
+            <button onClick={create} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm">Хадгалах / Save</button>
+            <button onClick={() => setCreating(false)} className="px-4 py-2 text-sm text-slate-600">Болих / Cancel</button>
           </div>
         </div>
       )}
@@ -73,16 +73,16 @@ export default function ErpPage() {
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => testConn(it.id)} className="text-sm text-slate-700 hover:text-slate-900 px-3 py-1.5 border border-slate-300 rounded-lg">
-                Холболт шалгах
+                Холболт шалгах / Test connection
               </button>
               <label className="inline-flex items-center gap-2 text-sm text-slate-700">
                 <input type="checkbox" checked={it.isActive} onChange={(e) => toggle(it.id, e.target.checked)} />
-                Идэвхтэй
+                Идэвхтэй / Active
               </label>
             </div>
           </div>
         ))}
-        {!items.length && <div className="p-8 text-center text-slate-500 text-sm">ERP байхгүй байна</div>}
+        {!items.length && <div className="p-8 text-center text-slate-500 text-sm">ERP байхгүй байна / No ERP configured</div>}
       </div>
     </div>
   );

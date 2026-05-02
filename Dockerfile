@@ -1,5 +1,7 @@
 FROM node:20-alpine
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl tzdata
+ENV TZ=Asia/Ulaanbaatar
+RUN cp /usr/share/zoneinfo/Asia/Ulaanbaatar /etc/localtime && echo "Asia/Ulaanbaatar" > /etc/timezone
 WORKDIR /app
 
 COPY package.json package-lock.json* ./

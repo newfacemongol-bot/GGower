@@ -37,6 +37,7 @@ services:
       POSTGRES_PASSWORD: chatbot_password
       POSTGRES_DB: chatbot_db
       TZ: Asia/Ulaanbaatar
+      PGTZ: Asia/Ulaanbaatar
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:

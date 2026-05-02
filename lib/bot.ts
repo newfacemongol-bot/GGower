@@ -598,7 +598,7 @@ async function stepMachine(a: StepArgs) {
       if (!ctx.phone) {
         const phone = extractPhone(t);
         if (!phone) {
-          await botSay(token, psid, convId, '8 оронтой, 7/8/9-өөр эхэлсэн дугаар оруулна уу.\nЖишээ: 88112233');
+          await botSay(token, psid, convId, '8 оронтой утасны дугаараа оруулна уу.\nЖишээ: 88112233');
           return;
         }
         ctx.phone = phone;

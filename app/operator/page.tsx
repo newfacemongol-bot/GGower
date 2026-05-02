@@ -300,8 +300,8 @@ export default function OperatorPage() {
             <button onClick={logout} className="text-slate-500 hover:text-slate-900"><LogOut className="w-4 h-4" /></button>
           </div>
         </div>
-        <div className="border-b border-slate-200 overflow-x-auto">
-          <div className="flex gap-0 px-2 py-2 min-w-max">
+        <div className="border-b border-slate-200">
+          <div className="flex flex-wrap gap-1 px-2 py-2">
             {TAB_META.map((t) => {
               const counts = list.filter((c) => classifyConv(c).includes(t.key));
               const count = t.key === 'ordered'

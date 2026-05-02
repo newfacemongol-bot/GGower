@@ -26,9 +26,6 @@ export function extractBareProductCode(text: string): string | null {
   for (const tok of tokens) {
     const cleaned = tok.replace(/[^\d]/g, '');
     if (!cleaned) continue;
-    if (cleaned.length >= 3 && cleaned.length <= 5 && !/^[789]/.test(cleaned)) {
-      return cleaned.padStart(4, '0');
-    }
     if (cleaned.length >= 3 && cleaned.length <= 5 && cleaned.length !== 8) {
       return cleaned.padStart(4, '0');
     }
@@ -40,7 +37,7 @@ export function extractPhone(text: string): string | null {
   let s = text.replace(/\s+|-/g, '');
   s = s.replace(/^\+?976/, '');
   const cleaned = s.replace(/[^\d]/g, '');
-  const match = cleaned.match(/([789]\d{7})/);
+  const match = cleaned.match(/(\d{8})/);
   return match ? match[1] : null;
 }
 
@@ -48,7 +45,6 @@ export function isPhoneOnlyMessage(text: string): string | null {
   const t = text.trim();
   const stripped = t.replace(/\s+|-/g, '').replace(/^\+?976/, '');
   if (!/^\d{8}$/.test(stripped)) return null;
-  if (!/^[789]/.test(stripped)) return null;
   return stripped;
 }
 

@@ -68,8 +68,8 @@ export function extractSlots(text: string, opts: { productSelected: boolean; wan
     prefixedCodes.push(`${L}-${padCode(m[2])}`);
   }
 
-  working = working.replace(/\+?976[\s-]*([789]\d[\s-]*\d{2}[\s-]*\d{2}[\s-]*\d{2})/g, (_m, g1) => g1.replace(/[\s-]/g, ''));
-  working = working.replace(/([789]\d)[\s-]+(\d{2})[\s-]+(\d{2})[\s-]+(\d{2})/g, '$1$2$3$4');
+  working = working.replace(/\+?976[\s-]*(\d{2}[\s-]*\d{2}[\s-]*\d{2}[\s-]*\d{2})/g, (_m, g1) => g1.replace(/[\s-]/g, ''));
+  working = working.replace(/(\d{2})[\s-]+(\d{2})[\s-]+(\d{2})[\s-]+(\d{2})/g, '$1$2$3$4');
 
   const digitTokens: { value: string; index: number }[] = [];
   const tokenRe = /\d+/g;
@@ -79,7 +79,7 @@ export function extractSlots(text: string, opts: { productSelected: boolean; wan
 
   let phoneToken: { value: string; index: number } | null = null;
   let extraPhoneToken: { value: string; index: number } | null = null;
-  const phoneCandidates = digitTokens.filter((d) => d.value.length === 8 && /^[789]/.test(d.value));
+  const phoneCandidates = digitTokens.filter((d) => d.value.length === 8);
   if (phoneCandidates.length > 0) {
     phoneToken = phoneCandidates[0];
     result.phone = phoneToken.value;

@@ -12,17 +12,23 @@ async function auth() {
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await auth())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
+  const data: any = {};
+  if (body.pageName !== undefined) data.pageName = body.pageName;
+  if (body.accessToken !== undefined && body.accessToken !== '') data.accessToken = body.accessToken;
+  if (body.erpConfigId !== undefined) data.erpConfigId = body.erpConfigId || null;
+  if (body.isActive !== undefined) data.isActive = body.isActive;
+  if (body.autoReplyEnabled !== undefined) data.autoReplyEnabled = body.autoReplyEnabled;
+  if (body.hourlyCommentLimit !== undefined) data.hourlyCommentLimit = body.hourlyCommentLimit;
+  if (body.reactionEnabled !== undefined) data.reactionEnabled = body.reactionEnabled;
+  const item = await prisma.facebookPage.update({ where: { id: params.id }, data });
+  return NextResponse.json({ item });
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  if (!(await auth())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const item = await prisma.facebookPage.update({
     where: { id: params.id },
-    data: {
-      pageName: body.pageName,
-      accessToken: body.accessToken,
-      erpConfigId: body.erpConfigId ?? null,
-      isActive: body.isActive,
-      autoReplyEnabled: body.autoReplyEnabled,
-      hourlyCommentLimit: body.hourlyCommentLimit,
-      reactionEnabled: body.reactionEnabled,
-    },
+    data: { isActive: false, autoReplyEnabled: false },
   });
   return NextResponse.json({ item });
 }

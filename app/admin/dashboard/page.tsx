@@ -39,15 +39,22 @@ interface Stats {
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [tick, setTick] = useState(0);
+  const [expiredTokens, setExpiredTokens] = useState<{ id: string; pageName: string }[]>([]);
 
   useEffect(() => {
     const load = () => fetch('/api/admin/stats').then((r) => r.json()).then(setStats).catch(() => {});
+    const loadTokens = () => fetch('/api/admin/pages/token-status').then((r) => r.json()).then((d) => {
+      const exp = (d.items || []).filter((it: any) => it.isActive && !it.valid).map((it: any) => ({ id: it.id, pageName: it.pageName }));
+      setExpiredTokens(exp);
+    }).catch(() => {});
     load();
+    loadTokens();
     const id = setInterval(() => {
       load();
       setTick((t) => t + 1);
     }, 5000);
-    return () => clearInterval(id);
+    const idT = setInterval(loadTokens, 60000);
+    return () => { clearInterval(id); clearInterval(idT); };
   }, []);
 
   return (
@@ -62,6 +69,19 @@ export default function Dashboard() {
           Live · шинэчлэгдсэн {tick * 5}с өмнө
         </div>
       </div>
+
+      {expiredTokens.length > 0 && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
+          <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-sm text-red-800 flex-1">
+            <div className="font-semibold mb-0.5">Токен дууссан пэйж байна</div>
+            <div className="text-red-700">
+              {expiredTokens.map((p) => p.pageName).join(', ')} токен дууссан байна!{' '}
+              <a href="/admin/pages" className="underline font-semibold">Засах → /admin/pages</a>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <Stat label="Одоо идэвхтэй" value={stats?.activeNow ?? 0} icon={<Activity className="w-5 h-5" />} accent="emerald" />

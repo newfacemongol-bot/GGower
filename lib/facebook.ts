@@ -1,6 +1,31 @@
 import crypto from 'crypto';
 
 const GRAPH = 'https://graph.facebook.com/v19.0';
+const GRAPH_V25 = 'https://graph.facebook.com/v25.0';
+
+export async function hideComment(pageAccessToken: string, commentId: string, hide = true): Promise<boolean> {
+  try {
+    const res = await fetch(`${GRAPH_V25}/${commentId}?access_token=${pageAccessToken}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_hidden: hide }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteComment(pageAccessToken: string, commentId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${GRAPH_V25}/${commentId}?access_token=${pageAccessToken}`, {
+      method: 'DELETE',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 export function verifySignature(payload: string, signature: string | null): boolean {
   const secret = process.env.FACEBOOK_APP_SECRET;

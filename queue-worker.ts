@@ -70,16 +70,9 @@ async function isNightMode(): Promise<boolean> {
 }
 
 async function processOne() {
-  // Text replies on comments are disabled entirely. Comments receive an instant
-  // LIKE reaction and phone collection in the webhook. Drop any stale queued
-  // leads from prior behavior so they do not linger.
-  await prisma.commentLead.updateMany({
-    where: { status: 'queued' },
-    data: { status: 'skipped' },
-  });
-}
+  const botEnabled = (await getSetting('bot_enabled', 'true')) === 'true';
+  if (!botEnabled) return;
 
-async function _legacyProcessOne() {
   const window = currentWindow();
   if (window === 'night' || (await isNightMode())) {
     await prisma.commentLead.updateMany({

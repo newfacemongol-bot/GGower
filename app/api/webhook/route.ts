@@ -4,7 +4,8 @@ import { verifySignature } from '@/lib/facebook';
 import { handleIncoming, handlePostback } from '@/lib/bot';
 import { isSpamComment } from '@/lib/comment-filter';
 import { extractPhone, extractProductCode } from '@/lib/product-code';
-import { reactToComment } from '@/lib/facebook';
+import { reactToComment, hideComment } from '@/lib/facebook';
+import { isNegativeComment } from '@/lib/negative-comment';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +58,26 @@ export async function POST(req: NextRequest) {
 
       try {
         const phone = extractPhone(text);
-        reactToComment(page.accessToken, v.comment_id, 'LIKE').catch(() => false);
+        const negative = isNegativeComment(text);
+
+        let status: string;
+        let hidden = false;
+        let scheduledFor: Date | null = null;
+
+        if (phone) {
+          status = 'phone_collected';
+          hideComment(page.accessToken, v.comment_id, true).catch(() => false);
+          reactToComment(page.accessToken, v.comment_id, 'LIKE').catch(() => false);
+          hidden = true;
+        } else if (negative) {
+          status = 'negative_hidden';
+          hideComment(page.accessToken, v.comment_id, true).catch(() => false);
+          hidden = true;
+        } else {
+          status = 'queued';
+          reactToComment(page.accessToken, v.comment_id, 'LIKE').catch(() => false);
+          scheduledFor = new Date(Date.now() + 15000 + Math.floor(Math.random() * 45000));
+        }
 
         await prisma.commentLead.create({
           data: {
@@ -69,9 +89,10 @@ export async function POST(req: NextRequest) {
             commentText: text,
             extractedPhone: phone,
             productCode: extractProductCode(text),
-            status: phone ? 'phone_collected' : 'no_phone',
-            replied: true,
-            repliedAt: new Date(),
+            status,
+            scheduledFor,
+            replied: hidden,
+            repliedAt: hidden ? new Date() : null,
           },
         });
       } catch (e: any) {

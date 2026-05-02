@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert, Phone, X } from 'lucide-react';
+import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert, Phone, X, EyeOff, Eye, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Template { id: string; title: string; text: string; shortcut: string | null; }
@@ -24,7 +24,9 @@ export default function OperatorPage() {
   const [noteDraft, setNoteDraft] = useState('');
   const [editingNote, setEditingNote] = useState(false);
   const [showPhones, setShowPhones] = useState(false);
+  const [phonesTab, setPhonesTab] = useState<'phones' | 'hidden'>('phones');
   const [phones, setPhones] = useState<any[]>([]);
+  const [hidden, setHidden] = useState<any[]>([]);
   const [phonesLoading, setPhonesLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -150,12 +152,30 @@ export default function OperatorPage() {
   async function loadPhones() {
     setPhonesLoading(true);
     try {
-      const r = await fetch('/api/operator/comment-phones?hours=16');
-      const d = await r.json();
-      setPhones(d.items || []);
+      const [a, b] = await Promise.all([
+        fetch('/api/operator/comment-phones?hours=16').then((r) => r.json()),
+        fetch('/api/operator/hidden-comments').then((r) => r.json()),
+      ]);
+      setPhones(a.items || []);
+      setHidden(b.items || []);
     } finally {
       setPhonesLoading(false);
     }
+  }
+
+  async function unhideComment(id: string) {
+    await fetch(`/api/operator/hidden-comments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'unhide' }),
+    });
+    loadPhones();
+  }
+
+  async function deleteHiddenComment(id: string) {
+    if (!confirm('Энэ коммэнтийг устгах уу?')) return;
+    await fetch(`/api/operator/hidden-comments/${id}`, { method: 'DELETE' });
+    loadPhones();
   }
 
   async function logout() {
@@ -332,51 +352,99 @@ export default function OperatorPage() {
         <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={() => setShowPhones(false)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Phone className="w-5 h-5 text-emerald-600" />
-                  <h3 className="font-bold text-slate-900">Комментоос цуглуулсан утас</h3>
-                </div>
-                <div className="text-sm text-slate-600 mt-1">
-                  Сүүлийн 16 цагт <b>{phones.length}</b> утас цуглуулсан
-                </div>
-              </div>
+              <h3 className="font-bold text-slate-900">Коммент удирдлага</h3>
               <button onClick={() => setShowPhones(false)} className="text-slate-500 hover:text-slate-900"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="px-6 pt-3 border-b border-slate-200 flex gap-1">
+              <button
+                onClick={() => setPhonesTab('phones')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${phonesTab === 'phones' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
+              >
+                <span className="inline-flex items-center gap-1"><Phone className="w-4 h-4" /> Цуглуулсан утаснууд ({phones.length})</span>
+              </button>
+              <button
+                onClick={() => setPhonesTab('hidden')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${phonesTab === 'hidden' ? 'border-red-600 text-red-700' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
+              >
+                <span className="inline-flex items-center gap-1"><EyeOff className="w-4 h-4" /> Нуугдсан коммент ({hidden.length})</span>
+              </button>
             </div>
             <div className="flex-1 overflow-auto">
               {phonesLoading && <div className="p-8 text-center text-slate-500 text-sm">Ачааллаж байна...</div>}
-              {!phonesLoading && phones.length === 0 && (
-                <div className="p-8 text-center text-slate-500 text-sm">Утас олдсонгүй</div>
-              )}
-              <div className="divide-y divide-slate-100">
-                {phones.map((p) => (
-                  <div key={p.id} className="px-6 py-3 hover:bg-slate-50">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-slate-900">{p.senderName || 'Unknown'}</span>
-                          <span className="text-xs text-slate-500">{p.pageName}</span>
+              {!phonesLoading && phonesTab === 'phones' && (
+                <>
+                  {phones.length === 0 && <div className="p-8 text-center text-slate-500 text-sm">Утас олдсонгүй</div>}
+                  <div className="divide-y divide-slate-100">
+                    {phones.map((p) => (
+                      <div key={p.id} className="px-6 py-3 hover:bg-slate-50">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-slate-900">{p.senderName || 'Unknown'}</span>
+                              <span className="text-xs text-slate-500">{p.pageName}</span>
+                            </div>
+                            <div className="text-sm text-slate-700 line-clamp-2 mb-1">{p.commentText}</div>
+                            {p.postLink && (
+                              <a href={p.postLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                                Постыг харах
+                              </a>
+                            )}
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <div className="font-mono font-bold text-slate-900 mb-1">{p.phone}</div>
+                            <a
+                              href={`tel:${p.phone}`}
+                              className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                            >
+                              <Phone className="w-3 h-3" /> Дуудах
+                            </a>
+                          </div>
                         </div>
-                        <div className="text-sm text-slate-700 line-clamp-2 mb-1">{p.commentText}</div>
-                        {p.postLink && (
-                          <a href={p.postLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
-                            Постыг харах
-                          </a>
-                        )}
                       </div>
-                      <div className="shrink-0 text-right">
-                        <div className="font-mono font-bold text-slate-900 mb-1">{p.phone}</div>
-                        <a
-                          href={`tel:${p.phone}`}
-                          className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                        >
-                          <Phone className="w-3 h-3" /> Дуудах
-                        </a>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              )}
+              {!phonesLoading && phonesTab === 'hidden' && (
+                <>
+                  {hidden.length === 0 && <div className="p-8 text-center text-slate-500 text-sm">Нуугдсан коммент байхгүй</div>}
+                  <div className="divide-y divide-slate-100">
+                    {hidden.map((h) => (
+                      <div key={h.id} className="px-6 py-3 hover:bg-slate-50">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-slate-900">{h.senderName || 'Unknown'}</span>
+                              <span className="text-xs text-slate-500">{h.pageName}</span>
+                              <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">NEGATIVE</span>
+                            </div>
+                            <div className="text-sm text-slate-700 mb-1 whitespace-pre-wrap">{h.commentText}</div>
+                            {h.postLink && (
+                              <a href={h.postLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                                Постыг харах
+                              </a>
+                            )}
+                          </div>
+                          <div className="shrink-0 flex flex-col gap-1">
+                            <button
+                              onClick={() => unhideComment(h.id)}
+                              className="inline-flex items-center gap-1 text-xs px-3 py-1.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100"
+                            >
+                              <Eye className="w-3 h-3" /> Харуулах
+                            </button>
+                            <button
+                              onClick={() => deleteHiddenComment(h.id)}
+                              className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                            >
+                              <Trash2 className="w-3 h-3" /> Устгах
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

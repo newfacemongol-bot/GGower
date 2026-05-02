@@ -12,6 +12,16 @@ import { getBotMessage } from './bot-messages';
 import { detectNegative } from './negative-detect';
 
 const SPAM_ORDER_THRESHOLD = 5;
+const TOP_PRODUCT_CODES = ['0140', '0177', '0152', 'P-0117', '0127', '0134'];
+
+function sortByTopProducts<T extends { code?: string | null }>(products: T[]): T[] {
+  const rank = new Map(TOP_PRODUCT_CODES.map((c, i) => [c.toUpperCase(), i]));
+  return [...products].sort((a, b) => {
+    const ra = a.code ? rank.get(a.code.toUpperCase()) ?? 999 : 999;
+    const rb = b.code ? rank.get(b.code.toUpperCase()) ?? 999 : 999;
+    return ra - rb;
+  });
+}
 const SPAM_WINDOW_HOURS = 24;
 const MAX_MISUNDERSTAND = 2;
 
@@ -76,8 +86,12 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
       const profile = await fetchUserProfile(page.accessToken, psid);
       if (profile) displayName = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim();
     }
+    const priorOrder = await prisma.order.findFirst({
+      where: { conversation: { psid } },
+      select: { id: true },
+    });
     conv = await prisma.conversation.create({
-      data: { pageId, psid, senderName: displayName, state: 'IDLE' },
+      data: { pageId, psid, senderName: displayName, state: 'IDLE', isReturningCustomer: !!priorOrder },
     });
   }
 
@@ -233,7 +247,10 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
       return;
     }
     if (isOrderIntent(text) && !detectedCode) {
-      await botSay(page.accessToken, psid, conv.id, await getBotMessage('phone_received_ask_product'));
+      const greeting = conv.isReturningCustomer
+        ? 'Сайн байна уу, дахин морилно уу! 😊\nЯмар бараа авахыг хүсч байна вэ?'
+        : await getBotMessage('phone_received_ask_product');
+      await botSay(page.accessToken, psid, conv.id, greeting);
       await updateState(conv.id, 'PRODUCT', ctx, cart);
       return;
     }
@@ -521,7 +538,7 @@ async function stepMachine(a: StepArgs) {
         return;
       }
       ctx.misunderstandCount = 0;
-      products = products.slice(0, 5);
+      products = sortByTopProducts(products).slice(0, 5);
       if (products.length === 1) {
         ctx.selectedProduct = products[0];
         await sendProductGallery(token, psid, convId, products[0]);

@@ -52,6 +52,9 @@ model Conversation {
   lastMessageAt      DateTime @default(now())
   status             String   @default("active")
   sentiment          String   @default("neutral")
+  phoneFollowupSentAt   DateTime?
+  intentFollowupSentAt  DateTime?
+  isReturningCustomer   Boolean  @default(false)
   unreadCount        Int      @default(0)
   abandonedAt        DateTime?
   reminder1SentAt    DateTime?

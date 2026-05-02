@@ -11,6 +11,8 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 const REMINDER_1_DELAY_MS = 1 * ONE_HOUR_MS;
 const REMINDER_23_DELAY_MS = 23 * ONE_HOUR_MS;
 const FACEBOOK_WINDOW_MS = 24 * ONE_HOUR_MS;
+const PHONE_FOLLOWUP_DELAY_MS = 30 * 60 * 1000;
+const INTENT_FOLLOWUP_DELAY_MS = 60 * 60 * 1000;
 const MAX_ORDER_RETRY = 3;
 
 const PEAK_HOURLY_LIMIT = 40;
@@ -36,7 +38,17 @@ function currentWindow(): TrafficWindow {
   return 'offpeak';
 }
 
+function isOrderPeakHour(): boolean {
+  // Based on real data: 10:00-11:00 MN is peak order time (335 orders).
+  // Deprioritize comment replies so messenger gets responded to faster.
+  const h = new Date().getHours();
+  return h === 10;
+}
+
 function windowLimits(w: TrafficWindow): { hourly: number; minDelay: number; maxDelay: number } {
+  if (isOrderPeakHour()) {
+    return { hourly: Math.floor(PEAK_HOURLY_LIMIT / 2), minDelay: PEAK_DELAY_MAX_MS, maxDelay: PEAK_DELAY_MAX_MS * 2 };
+  }
   if (w === 'peak') return { hourly: PEAK_HOURLY_LIMIT, minDelay: PEAK_DELAY_MIN_MS, maxDelay: PEAK_DELAY_MAX_MS };
   return { hourly: OFFPEAK_HOURLY_LIMIT, minDelay: OFFPEAK_DELAY_MIN_MS, maxDelay: OFFPEAK_DELAY_MAX_MS };
 }
@@ -272,6 +284,70 @@ async function processReminders() {
   }
 }
 
+async function processAbandonedFollowups() {
+  const botEnabled = (await getSetting('bot_enabled', 'true')) === 'true';
+  if (!botEnabled) return;
+  if (await isNightMode()) return;
+
+  const now = Date.now();
+  const cutoffPhone = new Date(now - PHONE_FOLLOWUP_DELAY_MS);
+  const cutoffIntent = new Date(now - INTENT_FOLLOWUP_DELAY_MS);
+  const windowCutoff = new Date(now - FACEBOOK_WINDOW_MS);
+
+  const phoneStuck = await prisma.conversation.findMany({
+    where: {
+      phoneFollowupSentAt: null,
+      isOperatorHandoff: false,
+      state: { in: ['PHONE', 'EXTRA_PHONE', 'PROVINCE', 'DISTRICT'] },
+      lastMessageAt: { lte: cutoffPhone, gte: windowCutoff },
+    },
+    include: { page: true },
+    take: 30,
+  });
+
+  for (const conv of phoneStuck) {
+    if (!conv.page?.isActive || !conv.page?.accessToken) continue;
+    const ctx = (conv.context as any) || {};
+    if (!ctx.phone) continue;
+    if (ctx.address) continue;
+
+    const msg = 'Сайн байна уу! 😊\nХаягаа бичвэл захиалгыг бүртгэж өгнө 📍\n(Дүүрэг, хороо, байр, тоот)';
+    const ok = await sendText(conv.page.accessToken, conv.psid, msg).catch(() => false);
+    if (ok) {
+      await prisma.message.create({ data: { conversationId: conv.id, text: msg, isFromBot: true } });
+      await prisma.conversation.update({ where: { id: conv.id }, data: { phoneFollowupSentAt: new Date() } });
+      console.log(`[followup] phone->address nudge to ${conv.psid}`);
+    }
+  }
+
+  const intentStuck = await prisma.conversation.findMany({
+    where: {
+      intentFollowupSentAt: null,
+      isOperatorHandoff: false,
+      state: 'PRODUCT',
+      lastMessageAt: { lte: cutoffIntent, gte: windowCutoff },
+    },
+    include: { page: true },
+    take: 30,
+  });
+
+  for (const conv of intentStuck) {
+    if (!conv.page?.isActive || !conv.page?.accessToken) continue;
+    const ctx = (conv.context as any) || {};
+    if (ctx.selectedProduct) continue;
+    const cart = (conv.cart as any[]) || [];
+    if (cart.length > 0) continue;
+
+    const msg = 'Сайн байна уу! 😊\nЯмар бараа авахыг хүсч байна вэ?\nБүтээгдэхүүний код эсвэл нэрийг бичнэ үү.';
+    const ok = await sendText(conv.page.accessToken, conv.psid, msg).catch(() => false);
+    if (ok) {
+      await prisma.message.create({ data: { conversationId: conv.id, text: msg, isFromBot: true } });
+      await prisma.conversation.update({ where: { id: conv.id }, data: { intentFollowupSentAt: new Date() } });
+      console.log(`[followup] intent->product nudge to ${conv.psid}`);
+    }
+  }
+}
+
 async function processOrderRetries() {
   const failed = await prisma.order.findMany({
     where: {
@@ -353,6 +429,7 @@ async function main() {
       if (Date.now() - lastReminderRun >= REMINDER_POLL_INTERVAL_MS) {
         lastReminderRun = Date.now();
         await processReminders().catch((e) => console.error('[reminders] error:', e));
+        await processAbandonedFollowups().catch((e) => console.error('[followups] error:', e));
       }
       if (Date.now() - lastRetryRun >= RETRY_POLL_INTERVAL_MS) {
         lastRetryRun = Date.now();

@@ -348,6 +348,9 @@ async function updateState(convId: string, state: State, ctx: Ctx, cart?: CartIt
   const current = await prisma.conversation.findUnique({ where: { id: convId } });
   const data: any = { state, context: ctx as any, lastMessageAt: new Date() };
   if (cart) data.cart = cart as any;
+  if (typeof ctx.misunderstandCount === 'number') {
+    data.misunderstandCount = ctx.misunderstandCount;
+  }
   if (current && current.state !== state) {
     const hist = (current.history as unknown as HistoryEntry[]) || [];
     data.history = pushHistory(

@@ -46,6 +46,15 @@ export async function erpTestConnection(_cfg: ErpConfigShape): Promise<{ ok: boo
 }
 
 export async function erpSearchProducts(_cfg: ErpConfigShape, query: string, pageSize = 5): Promise<ErpProduct[]> {
+  if (isStressTestMode()) {
+    const q = query.trim().toUpperCase();
+    if (q === '0116' || q === 'P-0116' || q === '116') {
+      return [{ id: 'stress-116', code: '0116', name: 'Stress Test Product', price: 10000, stock: 100, images: [] }];
+    }
+    if (q === '0117' || q === 'P-0117') {
+      return [{ id: 'stress-117', code: 'P-0117', name: 'Stress Test Product 2', price: 15000, stock: 50, images: [] }];
+    }
+  }
   try {
     const like = `%${query}%`;
     const rows = await erpDb.$queryRaw<ProductRow[]>`

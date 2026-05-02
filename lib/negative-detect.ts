@@ -52,7 +52,7 @@ export function detectNegative(text: string): NegativeMatch | null {
     };
   }
 
-  if (/(цуцал|цуцлаа|авахгүй\s*болсон|болихоо|хэрэггүй\s*болч|хүргэж\s*ирэх\s*хэрэггүй|болих\s*болсон)/i.test(t)) {
+  if (/(цуцал|цуцлаа|авахгүй\s*болсон|болихоо|болих|болиё|болио|хэрэггүй\s*болч|хүргэж\s*ирэх\s*хэрэггүй)/i.test(t)) {
     return {
       category: 'order_cancel',
       sentiment: 'neutral',

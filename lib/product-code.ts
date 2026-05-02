@@ -50,7 +50,7 @@ export function isPhoneOnlyMessage(text: string): string | null {
 
 export function isCancellationIntent(text: string): boolean {
   const t = text.toLowerCase();
-  return /цуцал|авахгүй|болихоо|болих болсон|цуцальяа|цуцалъя|болилоо|болихоо болсон|авахгүй болсон|авахгүй боллоо/.test(t);
+  return /цуцал|авахгүй|болихоо|болих|болиё|болио|цуцальяа|цуцалъя|болилоо|авахгүй болсон|авахгүй боллоо/.test(t);
 }
 
 export function isQuestionIntent(text: string): boolean {

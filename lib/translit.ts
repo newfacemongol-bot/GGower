@@ -26,6 +26,11 @@ function hasLatin(s: string): boolean {
 // Complete galig (latin -> cyrillic) dictionary based on 5,097 real conversations.
 // Exact word-boundary match. Case-insensitive.
 export const GALIG: Record<string, string> = {
+  // БАРАА (нэр)
+  udees: 'үдээс', vdees: 'үдээс', ydees: 'үдээс', udvs: 'үдээс',
+  udeesnii: 'үдээсний', udeesni: 'үдээсний', vdeesnii: 'үдээсний',
+  sharagch: 'шарагч', sharag: 'шарагч', sharagh: 'шарагч',
+
   // ЗАХИАЛГА
   zahialay: 'захиалая', zahialga: 'захиалга', zahialii: 'захиалъя',
   zahialiya: 'захиалъя', zahialiy: 'захиалъя', zahialah: 'захиалах',

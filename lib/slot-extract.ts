@@ -13,7 +13,7 @@ export interface ExtractedSlots {
 }
 
 const DIGIT_RE = /\d+/g;
-const PRODUCT_PREFIX_RE = /([pPcCрРсС])[-]?(\d{1,5})/g;
+const PRODUCT_PREFIX_RE = /([pPcCрРсСпПцЦ])[-\s]?(\d{1,5})/g;
 
 const RESET_KEYWORDS = [
   'шинэ захиалга',
@@ -63,7 +63,7 @@ export function extractSlots(text: string, opts: { productSelected: boolean; wan
   const prefixRe = new RegExp(PRODUCT_PREFIX_RE.source, 'g');
   while ((m = prefixRe.exec(normalized))) {
     const letter = m[1].toLowerCase();
-    const cyrToLat: Record<string, string> = { 'р': 'P', 'с': 'C', 'p': 'P', 'c': 'C' };
+    const cyrToLat: Record<string, string> = { 'р': 'P', 'с': 'C', 'п': 'P', 'ц': 'C', 'p': 'P', 'c': 'C' };
     const L = cyrToLat[letter] || letter.toUpperCase();
     prefixedCodes.push(`${L}-${padCode(m[2])}`);
   }

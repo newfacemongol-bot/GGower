@@ -102,6 +102,9 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
   });
 
   const ctx = (conv.context as Ctx) || {};
+  if (typeof ctx.misunderstandCount !== 'number') {
+    ctx.misunderstandCount = conv.misunderstandCount ?? 0;
+  }
   const now = Date.now();
   const recent = (ctx.lastMessageTimes || []).filter((t) => now - t < 10000);
   recent.push(now);

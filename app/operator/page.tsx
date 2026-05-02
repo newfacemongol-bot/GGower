@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert, Phone, X, EyeOff, Eye, Trash2 } from 'lucide-react';
+import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert, Phone, X, EyeOff, Eye, Trash2, MapPin, Package, Hash, Wallet, NotebookPen, Home, Globe2, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface Template { id: string; title: string; text: string; shortcut: string | null; }
 
@@ -432,10 +433,11 @@ export default function OperatorPage() {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex">
         {!conv && <div className="flex-1 flex items-center justify-center text-slate-500">Чат сонгоно уу</div>}
         {conv && (
           <>
+            <div className="flex-1 flex flex-col min-w-0" style={{ flexBasis: '70%' }}>
             <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
               <div>
                 <div className="font-semibold text-slate-900">{conv.senderName || 'Unknown'}</div>
@@ -520,6 +522,12 @@ export default function OperatorPage() {
                 </button>
               </div>
             </footer>
+            </div>
+            <CustomerInfoPanel
+              conv={conv}
+              onReset={() => resetConv(conv.id)}
+              onCreateOrder={() => toast('Захиалга үүсгэх үйлдэл удахгүй нэмэгдэнэ')}
+            />
           </>
         )}
       </main>
@@ -653,4 +661,176 @@ function StatusIcon({ status, handoff }: { status: string; handoff: boolean }) {
   if (status === 'closed') return <span className="text-slate-500">Дууссан</span>;
   if (handoff) return <span className="text-amber-600">Оператор</span>;
   return <span className="text-emerald-600">Bot</span>;
+}
+
+interface CustomerPanelProps {
+  conv: any;
+  onReset: () => void;
+  onCreateOrder: () => void;
+}
+
+function CustomerInfoPanel({ conv, onReset, onCreateOrder }: CustomerPanelProps) {
+  const ctx = (conv.context as any) || {};
+  const cart: any[] = Array.isArray(conv.cart) ? conv.cart : [];
+  const latestOrder = Array.isArray(conv.orders) && conv.orders.length > 0 ? conv.orders[0] : null;
+
+  const phone: string | null = ctx.phone || latestOrder?.customerPhone || null;
+  const extraPhone: string | null = ctx.extraPhone || latestOrder?.extraPhone || null;
+  const address: string | null = ctx.address || latestOrder?.address || null;
+  const district: string | null = ctx.district || latestOrder?.district || null;
+  const province: string | null = ctx.province || latestOrder?.province || null;
+  const note: string | null = ctx.note || latestOrder?.note || null;
+
+  const firstProductName: string | null =
+    cart[0]?.product?.name
+      || ctx.selectedProduct?.name
+      || (Array.isArray(latestOrder?.products) && latestOrder?.products[0]?.productName)
+      || null;
+  const totalQuantity: number =
+    cart.reduce((s, c) => s + (Number(c.quantity) || 0), 0)
+      || ctx.quantity
+      || (Array.isArray(latestOrder?.products) ? latestOrder!.products.reduce((s: number, p: any) => s + (Number(p.quantity) || 0), 0) : 0);
+  const orderTotal: number =
+    cart.reduce((s, c) => s + (Number(c.product?.price) || 0) * (Number(c.quantity) || 0), 0)
+      || latestOrder?.totalAmount
+      || 0;
+
+  const hasPhone = !!phone;
+  const hasAddress = !!address;
+  const hasProduct = !!firstProductName;
+
+  let statusCls = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+  let statusText = 'БЭЛЭН';
+  let statusEmoji = 'ok';
+  const missingCount = [!hasPhone, !hasAddress, !hasProduct].filter(Boolean).length;
+  if (missingCount >= 2) {
+    statusCls = 'bg-red-100 text-red-800 border-red-300';
+    statusText = 'ДУТУУ';
+    statusEmoji = 'red';
+  } else if (!hasProduct && hasPhone && hasAddress) {
+    statusCls = 'bg-orange-100 text-orange-800 border-orange-300';
+    statusText = 'БАРАА ДУТУУ';
+    statusEmoji = 'orange';
+  } else if (!hasAddress && hasPhone) {
+    statusCls = 'bg-amber-100 text-amber-800 border-amber-300';
+    statusText = 'ХАЯГ ДУТУУ';
+    statusEmoji = 'amber';
+  } else if (!hasPhone && hasAddress) {
+    statusCls = 'bg-blue-100 text-blue-800 border-blue-300';
+    statusText = 'УТАС ДУТУУ';
+    statusEmoji = 'blue';
+  }
+
+  const readyForOrder = hasPhone && hasAddress && hasProduct && !!province;
+
+  return (
+    <aside className="w-[30%] min-w-[280px] max-w-[420px] border-l border-slate-200 bg-white flex flex-col overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileText className="w-4 h-4 text-slate-700" />
+          <h3 className="font-semibold text-slate-900 text-sm">Хэрэглэгчийн мэдээлэл</h3>
+        </div>
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${statusCls}`}>
+          <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle ${
+            statusEmoji === 'ok' ? 'bg-emerald-500' :
+            statusEmoji === 'amber' ? 'bg-amber-500' :
+            statusEmoji === 'blue' ? 'bg-blue-500' :
+            statusEmoji === 'orange' ? 'bg-orange-500' : 'bg-red-500'
+          }`} />
+          {statusText}
+        </span>
+      </div>
+
+      <div className="flex-1 overflow-auto p-4 space-y-3 text-sm">
+        <InfoRow icon={<Phone className="w-4 h-4" />} label="Утас" value={phone} missing={!hasPhone} missingText="ДУТУУ" mono />
+        <InfoRow icon={<Phone className="w-4 h-4 opacity-70" />} label="Нэмэлт утас" value={extraPhone} mono />
+        <InfoRow icon={<Home className="w-4 h-4" />} label="Хаяг" value={address} missing={!hasAddress} missingText="ДУТУУ" />
+        <InfoRow icon={<MapPin className="w-4 h-4" />} label="Дүүрэг" value={district} />
+        <InfoRow icon={<Globe2 className="w-4 h-4" />} label="Аймаг/хот" value={province} missing={!province} missingText="ДУТУУ" />
+        <InfoRow icon={<Package className="w-4 h-4" />} label="Бараа" value={firstProductName} missing={!hasProduct} missingText="ДУТУУ" />
+        <InfoRow icon={<Hash className="w-4 h-4" />} label="Тоо" value={totalQuantity ? `${totalQuantity}ш` : null} />
+        <InfoRow icon={<Wallet className="w-4 h-4" />} label="Нийт" value={orderTotal ? `${orderTotal.toLocaleString()}₮` : null} />
+        <InfoRow icon={<NotebookPen className="w-4 h-4" />} label="Тэмдэглэл" value={note} />
+
+        {(!hasPhone || !hasAddress || !hasProduct) && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-amber-800 font-semibold text-xs">
+              <AlertTriangle className="w-4 h-4" /> Анхааруулга
+            </div>
+            {!hasPhone && <div className="text-xs text-amber-900">Утас нэхэж аваарай.</div>}
+            {!hasAddress && <div className="text-xs text-amber-900">Хаяг нэхэж аваарай.</div>}
+            {!hasProduct && <div className="text-xs text-amber-900">Бараа тодруулаарай.</div>}
+          </div>
+        )}
+
+        {latestOrder?.erpOrderId && (
+          <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+            <div className="text-xs font-semibold text-emerald-800 mb-0.5">
+              ERP захиалга
+            </div>
+            <div className="text-sm font-mono text-emerald-900">
+              #{latestOrder.erpOrderNumber || latestOrder.erpOrderId}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-slate-200 p-3 space-y-2">
+        <button
+          onClick={onReset}
+          className="w-full inline-flex items-center justify-center gap-2 text-sm px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700"
+        >
+          <RotateCcw className="w-4 h-4" /> Дахин эхлэх
+        </button>
+        {phone && (
+          <a
+            href={`tel:${phone}`}
+            className="w-full inline-flex items-center justify-center gap-2 text-sm px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+          >
+            <Phone className="w-4 h-4" /> Дуудах
+          </a>
+        )}
+        {readyForOrder && !latestOrder?.erpOrderId && (
+          <button
+            onClick={onCreateOrder}
+            className="w-full inline-flex items-center justify-center gap-2 text-sm px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+          >
+            <Package className="w-4 h-4" /> Захиалга үүсгэх
+          </button>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function InfoRow({
+  icon, label, value, missing, missingText, mono,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number | null | undefined;
+  missing?: boolean;
+  missingText?: string;
+  mono?: boolean;
+}) {
+  const displayValue = value !== null && value !== undefined && value !== '' && value !== 0 ? String(value) : null;
+  return (
+    <div className="flex items-start gap-2.5">
+      <div className="w-5 h-5 mt-0.5 text-slate-500 shrink-0 flex items-center justify-center">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
+        {displayValue ? (
+          <div className={`text-sm text-slate-900 break-words ${mono ? 'font-mono font-medium' : ''}`}>
+            {displayValue}
+          </div>
+        ) : missing ? (
+          <div className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5 mt-0.5">
+            <AlertTriangle className="w-3 h-3" /> {missingText || 'ДУТУУ'}
+          </div>
+        ) : (
+          <div className="text-sm text-slate-400">—</div>
+        )}
+      </div>
+    </div>
+  );
 }

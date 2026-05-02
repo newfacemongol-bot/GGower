@@ -590,6 +590,9 @@ async function stepMachine(a: StepArgs) {
         .replace(/\s+/g, ' ')
         .trim();
       const query = slots.productCode ?? (nameQuery.length >= 2 ? nameQuery : slots.remainingText);
+      const rawQuery = (query || '').trim();
+      // A "code" is digits-only (3-5) or letter-dash-digits e.g. P-0117.
+      const isCodeQuery = /^\d{3,5}$/.test(rawQuery) || /^[A-Za-z]-\d{3,5}$/.test(rawQuery);
       if (!query || query.length < 2) {
         ctx.misunderstandCount = (ctx.misunderstandCount ?? 0) + 1;
         await prisma.conversation.update({
@@ -609,7 +612,15 @@ async function stepMachine(a: StepArgs) {
         await updateState(convId, 'PRODUCT', ctx, cart);
         return;
       }
-      let products = await erpSearchProducts(erpConfig, query, 10);
+      let products: ErpProduct[];
+      if (isCodeQuery) {
+        // Exact code match only — do not fuzzy search.
+        const exactAll = await erpSearchProducts(erpConfig, rawQuery, 20);
+        const target = rawQuery.toUpperCase();
+        products = exactAll.filter((p) => (p.code || '').toUpperCase() === target);
+      } else {
+        products = await erpSearchProducts(erpConfig, query, 10);
+      }
 
       if (priceRange) {
         products = products.filter((p) => {
@@ -619,8 +630,8 @@ async function stepMachine(a: StepArgs) {
         });
       }
 
-      if (!products.length && query.length >= 3) {
-        // Fuzzy fallback: try with first 3 chars prefix to be tolerant to typos
+      if (!isCodeQuery && !products.length && query.length >= 3) {
+        // Fuzzy fallback: try with prefix to be tolerant to typos (NAME queries only).
         const stem = query.slice(0, Math.max(3, query.length - 2));
         products = await erpSearchProducts(erpConfig, stem, 10);
         if (priceRange) {
@@ -642,7 +653,16 @@ async function stepMachine(a: StepArgs) {
           await handoffToOperator(token, psid, convId, 'no_product_found');
           return;
         }
-        await botSay(token, psid, convId, await getBotMessage('product_not_found'));
+        if (isCodeQuery) {
+          await botSay(
+            token,
+            psid,
+            convId,
+            `Уучлаарай, ${rawQuery} кодтой бараа манайд байхгүй байна 😔\nТа дахин шалгаад эсвэл барааны нэрийг бичнэ үү.`,
+          );
+        } else {
+          await botSay(token, psid, convId, await getBotMessage('product_not_found'));
+        }
         await updateState(convId, 'PRODUCT', ctx, cart);
         return;
       }

@@ -63,99 +63,82 @@ export default function Dashboard() {
   const maxPage = Math.max(1, ...(stats?.pages ?? []).map((p) => p.conversations));
 
   return (
-    <div className="p-6 sm:p-8 max-w-[1400px] mx-auto">
-      <header className="mb-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
-            <p className="text-sm text-slate-500 mt-1">Хяналтын самбар · бодит цагийн дүн</p>
-          </div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs text-slate-600 shadow-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="font-medium text-slate-700">Live</span>
-            <span className="text-slate-400">·</span>
-            <span>updated {tick * 5}s ago</span>
-          </div>
+    <div className="w-full px-6 lg:px-8 py-8">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-1">Хяналтын самбар · бодит цагийн дүн</p>
+        </div>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs text-slate-600">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="font-medium text-slate-700">Live</span>
+          <span className="text-slate-300">·</span>
+          <span>updated {tick * 5}s ago</span>
         </div>
       </header>
 
       {!isDemoMode && expiredTokens.length > 0 && (
-        <div className="mb-6 bg-gradient-to-r from-rose-50 to-rose-50/50 border border-rose-200 rounded-xl px-5 py-4 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-lg bg-rose-100 flex items-center justify-center shrink-0">
+        <div className="mb-6 bg-white border border-rose-200 rounded-xl px-5 py-4 flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center shrink-0">
             <ShieldAlert className="w-5 h-5 text-rose-600" />
           </div>
-          <div className="text-sm text-rose-900 flex-1">
-            <div className="font-semibold mb-0.5">Expired page token(s)</div>
-            <div className="text-rose-700">
+          <div className="text-sm flex-1">
+            <div className="font-semibold text-slate-900 mb-0.5">Expired page token(s)</div>
+            <div className="text-slate-600">
               {expiredTokens.map((p) => p.pageName).join(', ')} token expired.{' '}
-              <a href="/admin/pages" className="underline font-semibold">Edit pages</a>
+              <a href="/admin/pages" className="underline font-medium text-rose-600">Edit pages</a>
             </div>
           </div>
         </div>
       )}
 
-      <section className="mb-10">
-        <SectionHeader title="Overview" subtitle="Гол үзүүлэлтүүд" />
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <HeroStat label="Active now" sub="Одоо идэвхтэй" value={stats?.activeNow ?? 0} icon={<Activity className="w-5 h-5" />} accent="emerald" pulse />
-          <HeroStat label="Today's orders" sub="Өнөөдрийн захиалга" value={stats?.todayOrders ?? 0} icon={<ShoppingBag className="w-5 h-5" />} accent="slate" />
-          <HeroStat label="Conversion" sub="Хөрвүүлэлт" value={`${stats?.conversionRate ?? 0}%`} icon={<TrendingUp className="w-5 h-5" />} accent="blue" />
-          <HeroStat label="Pending chats" sub="Хүлээгдэж буй" value={stats?.pendingChats ?? 0} icon={<MessageCircle className="w-5 h-5" />} accent={stats && stats.pendingChats > 0 ? 'amber' : 'slate'} />
+      <section className="mb-8">
+        <SectionHeader title="Overview" />
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
+        >
+          <StatCard label="Active now" sub="Одоо идэвхтэй" value={stats?.activeNow ?? 0} icon={<Activity className="w-4 h-4" />} tone="emerald" pulse />
+          <StatCard label="Today's orders" sub="Өнөөдрийн захиалга" value={stats?.todayOrders ?? 0} icon={<ShoppingBag className="w-4 h-4" />} />
+          <StatCard label="Conversion" sub="Хөрвүүлэлт" value={`${stats?.conversionRate ?? 0}%`} icon={<TrendingUp className="w-4 h-4" />} tone="blue" />
+          <StatCard label="Pending chats" sub="Хүлээгдэж буй" value={stats?.pendingChats ?? 0} icon={<MessageCircle className="w-4 h-4" />} tone={stats && stats.pendingChats > 0 ? 'amber' : 'neutral'} />
+          <StatCard label="Today's chats" sub="Өнөөдрийн яриа" value={stats?.todayConvs ?? 0} icon={<Users className="w-4 h-4" />} tone="blue" />
+          <StatCard label="Confirmed" sub="Батлагдсан" value={stats?.todayCompletedOrders ?? 0} icon={<CircleCheck className="w-4 h-4" />} tone="emerald" />
         </div>
       </section>
 
-      <section className="mb-10">
-        <SectionHeader title="Attention needed" subtitle="Анхаарал хандуулах" />
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MiniStat label="Abandoned carts" sub="Орхигдсон сагс" value={stats?.abandonedCarts ?? 0} icon={<ShoppingCart className="w-4 h-4" />} tone={stats && stats.abandonedCarts > 0 ? 'amber' : 'neutral'} />
-          <MiniStat label="Failed orders" sub="Амжилтгүй захиалга" value={stats?.failedOrders ?? 0} icon={<TriangleAlert className="w-4 h-4" />} tone={stats && stats.failedOrders > 0 ? 'rose' : 'neutral'} />
-          <MiniStat label="Urgent" sub="Яаралтай" value={stats?.urgentCount ?? 0} icon={<TriangleAlert className="w-4 h-4" />} tone={stats && stats.urgentCount > 0 ? 'rose' : 'neutral'} />
-          <MiniStat label="Complaints" sub="Гомдол" value={stats?.complaintCount ?? 0} icon={<ShieldAlert className="w-4 h-4" />} tone={stats && stats.complaintCount > 0 ? 'amber' : 'neutral'} />
+      <section className="mb-8">
+        <SectionHeader title="Attention needed" />
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
+        >
+          <StatCard label="Abandoned carts" sub="Орхигдсон сагс" value={stats?.abandonedCarts ?? 0} icon={<ShoppingCart className="w-4 h-4" />} tone={stats && stats.abandonedCarts > 0 ? 'amber' : 'neutral'} />
+          <StatCard label="Failed orders" sub="Амжилтгүй" value={stats?.failedOrders ?? 0} icon={<TriangleAlert className="w-4 h-4" />} tone={stats && stats.failedOrders > 0 ? 'rose' : 'neutral'} />
+          <StatCard label="Urgent" sub="Яаралтай" value={stats?.urgentCount ?? 0} icon={<TriangleAlert className="w-4 h-4" />} tone={stats && stats.urgentCount > 0 ? 'rose' : 'neutral'} />
+          <StatCard label="Complaints" sub="Гомдол" value={stats?.complaintCount ?? 0} icon={<ShieldAlert className="w-4 h-4" />} tone={stats && stats.complaintCount > 0 ? 'amber' : 'neutral'} />
+          <StatCard label="Spam blocked" sub="Спам" value={stats?.spamBlocked ?? 0} icon={<ShieldAlert className="w-4 h-4" />} />
         </div>
       </section>
 
-      <section className="mb-10">
+      <section className="mb-8">
         <SectionHeader title="Messaging window" subtitle="24 цагийн цонх" />
-        <div className="grid md:grid-cols-3 gap-4">
-          <WindowCard
-            label="Closing in 2h"
-            sub="2 цаг дотор хаагдах"
-            value={stats?.windowClosingIn2h ?? 0}
-            tone={stats && stats.windowClosingIn2h > 0 ? 'amber' : 'neutral'}
-            icon={<Clock className="w-4 h-4" />}
-          />
-          <WindowCard
-            label="Closing in 30 min"
-            sub="30 минут дотор"
-            value={stats?.windowClosingIn30m ?? 0}
-            tone={stats && stats.windowClosingIn30m > 0 ? 'rose' : 'neutral'}
-            icon={<TriangleAlert className="w-4 h-4" />}
-          />
-          <WindowCard
-            label="Expired"
-            sub="24 цаг хэтэрсэн"
-            value={stats?.windowExpired ?? 0}
-            tone={stats && stats.windowExpired > 0 ? 'rose' : 'neutral'}
-            icon={<ShieldAlert className="w-4 h-4" />}
-          />
-        </div>
-      </section>
-
-      <section className="mb-10">
-        <SectionHeader title="Today" subtitle="Өнөөдрийн нэгдсэн үзүүлэлт" />
-        <div className="grid md:grid-cols-3 gap-4">
-          <SummaryCard icon={<Users className="w-5 h-5" />} label="Today's chats" sub="Өнөөдрийн яриа" value={stats?.todayConvs ?? 0} tint="blue" />
-          <SummaryCard icon={<CircleCheck className="w-5 h-5" />} label="Confirmed" sub="Батлагдсан захиалга" value={stats?.todayCompletedOrders ?? 0} tint="emerald" />
-          <SummaryCard icon={<ShieldAlert className="w-5 h-5" />} label="Spam blocked" sub="Спам блоклосон" value={stats?.spamBlocked ?? 0} tint="slate" />
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
+        >
+          <StatCard label="Closing in 2h" sub="2 цаг дотор" value={stats?.windowClosingIn2h ?? 0} icon={<Clock className="w-4 h-4" />} tone={stats && stats.windowClosingIn2h > 0 ? 'amber' : 'neutral'} />
+          <StatCard label="Closing in 30 min" sub="30 минут дотор" value={stats?.windowClosingIn30m ?? 0} icon={<TriangleAlert className="w-4 h-4" />} tone={stats && stats.windowClosingIn30m > 0 ? 'rose' : 'neutral'} />
+          <StatCard label="Expired" sub="Хэтэрсэн" value={stats?.windowExpired ?? 0} icon={<ShieldAlert className="w-4 h-4" />} tone={stats && stats.windowExpired > 0 ? 'rose' : 'neutral'} />
         </div>
       </section>
 
       <section>
         <SectionHeader title="Pages" subtitle="Пэйжийн ачаалал" />
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200">
           <div className="divide-y divide-slate-100">
             {(stats?.pages ?? []).map((p) => {
               const pct = Math.round((p.conversations / maxPage) * 100);
@@ -163,15 +146,17 @@ export default function Dashboard() {
                 <div key={p.pageId} className="px-6 py-4 hover:bg-slate-50/60 transition-colors">
                   <div className="flex items-center justify-between gap-4 mb-2">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-500 flex items-center justify-center shrink-0">
                         <Facebook className="w-4 h-4" />
                       </div>
                       <span className="font-medium text-slate-900 truncate">{p.pageName}</span>
                     </div>
-                    <span className="text-sm font-semibold text-slate-700 tabular-nums">{p.conversations} <span className="text-xs font-normal text-slate-400">chats</span></span>
+                    <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                      {p.conversations} <span className="text-xs font-normal text-slate-400">chats</span>
+                    </span>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                    <div className="h-full bg-slate-900 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -181,7 +166,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
                   <Facebook className="w-5 h-5 text-slate-400" />
                 </div>
-                <div className="text-sm font-medium text-slate-600">No pages yet</div>
+                <div className="text-sm font-medium text-slate-700">No pages yet</div>
                 <div className="text-xs text-slate-400 mt-0.5">Пэйж байхгүй байна</div>
               </div>
             )}
@@ -194,150 +179,53 @@ export default function Dashboard() {
 
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="mb-4 flex items-baseline gap-2">
-      <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">{title}</h2>
+    <div className="mb-3 flex items-baseline gap-2">
+      <h2 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">{title}</h2>
       {subtitle && <span className="text-xs text-slate-400">· {subtitle}</span>}
     </div>
   );
 }
 
-const accentStyles: Record<string, { icon: string; value: string; bar: string; bg: string }> = {
-  emerald: { icon: 'bg-emerald-50 text-emerald-600', value: 'text-slate-900', bar: 'bg-emerald-500', bg: 'from-emerald-500/5 to-transparent' },
-  blue: { icon: 'bg-blue-50 text-blue-600', value: 'text-slate-900', bar: 'bg-blue-500', bg: 'from-blue-500/5 to-transparent' },
-  amber: { icon: 'bg-amber-50 text-amber-600', value: 'text-amber-700', bar: 'bg-amber-500', bg: 'from-amber-500/5 to-transparent' },
-  rose: { icon: 'bg-rose-50 text-rose-600', value: 'text-rose-700', bar: 'bg-rose-500', bg: 'from-rose-500/5 to-transparent' },
-  slate: { icon: 'bg-slate-100 text-slate-600', value: 'text-slate-900', bar: 'bg-slate-400', bg: 'from-slate-500/5 to-transparent' },
+const toneStyles: Record<string, { icon: string; value: string }> = {
+  neutral: { icon: 'bg-slate-50 text-slate-500', value: 'text-slate-900' },
+  emerald: { icon: 'bg-emerald-50 text-emerald-600', value: 'text-slate-900' },
+  blue: { icon: 'bg-blue-50 text-blue-600', value: 'text-slate-900' },
+  amber: { icon: 'bg-amber-50 text-amber-600', value: 'text-slate-900' },
+  rose: { icon: 'bg-rose-50 text-rose-600', value: 'text-slate-900' },
 };
 
-function HeroStat({
+function StatCard({
   label,
   sub,
   value,
   icon,
-  accent = 'slate',
+  tone = 'neutral',
   pulse = false,
 }: {
   label: string;
   sub?: string;
   value: number | string;
   icon: React.ReactNode;
-  accent?: keyof typeof accentStyles;
+  tone?: keyof typeof toneStyles;
   pulse?: boolean;
 }) {
-  const a = accentStyles[accent];
-  return (
-    <div className={`relative bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden`}>
-      <div className={`absolute inset-0 bg-gradient-to-br ${a.bg} pointer-events-none`} />
-      <div className="relative">
-        <div className="flex items-center justify-between mb-4">
-          <div className={`w-10 h-10 rounded-xl ${a.icon} flex items-center justify-center`}>{icon}</div>
-          {pulse && (
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-          )}
-        </div>
-        <div className={`text-3xl font-bold ${a.value} tabular-nums tracking-tight`}>{value}</div>
-        <div className="mt-1">
-          <div className="text-sm font-medium text-slate-700">{label}</div>
-          {sub && <div className="text-xs text-slate-400">{sub}</div>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const toneStyles: Record<string, { icon: string; value: string; ring: string }> = {
-  neutral: { icon: 'bg-slate-100 text-slate-500', value: 'text-slate-900', ring: 'border-slate-200' },
-  amber: { icon: 'bg-amber-100 text-amber-700', value: 'text-amber-700', ring: 'border-amber-200' },
-  rose: { icon: 'bg-rose-100 text-rose-700', value: 'text-rose-700', ring: 'border-rose-200' },
-};
-
-function MiniStat({
-  label,
-  sub,
-  value,
-  icon,
-  tone = 'neutral',
-}: {
-  label: string;
-  sub?: string;
-  value: number | string;
-  icon: React.ReactNode;
-  tone?: keyof typeof toneStyles;
-}) {
   const t = toneStyles[tone];
   return (
-    <div className={`bg-white rounded-xl border ${t.ring} p-4 shadow-sm hover:shadow-md transition-shadow`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className={`w-8 h-8 rounded-lg ${t.icon} flex items-center justify-center shrink-0`}>{icon}</div>
-        <div className={`text-2xl font-bold ${t.value} tabular-nums`}>{value}</div>
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 min-h-[140px] flex flex-col justify-between transition-all duration-200 hover:shadow-sm hover:border-slate-300">
+      <div className="flex items-center justify-between">
+        <div className={`w-8 h-8 rounded-lg ${t.icon} flex items-center justify-center`}>{icon}</div>
+        {pulse && (
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+        )}
       </div>
-      <div className="mt-3">
-        <div className="text-sm font-medium text-slate-700">{label}</div>
-        {sub && <div className="text-xs text-slate-400">{sub}</div>}
-      </div>
-    </div>
-  );
-}
-
-function WindowCard({
-  label,
-  sub,
-  value,
-  icon,
-  tone,
-}: {
-  label: string;
-  sub?: string;
-  value: number;
-  icon: React.ReactNode;
-  tone: keyof typeof toneStyles;
-}) {
-  const t = toneStyles[tone];
-  return (
-    <div className={`bg-white rounded-xl border ${t.ring} p-5 shadow-sm`}>
-      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-3">
-        <span className={`w-6 h-6 rounded-md ${t.icon} flex items-center justify-center`}>{icon}</span>
-        <span>{label}</span>
-      </div>
-      <div className={`text-3xl font-bold ${t.value} tabular-nums`}>{value}</div>
-      {sub && <div className="text-xs text-slate-400 mt-1">{sub}</div>}
-    </div>
-  );
-}
-
-const tintStyles: Record<string, string> = {
-  blue: 'from-blue-500/10 to-blue-500/0 text-blue-600',
-  emerald: 'from-emerald-500/10 to-emerald-500/0 text-emerald-600',
-  slate: 'from-slate-500/10 to-slate-500/0 text-slate-600',
-};
-
-function SummaryCard({
-  icon,
-  label,
-  sub,
-  value,
-  tint,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  sub?: string;
-  value: number;
-  tint: keyof typeof tintStyles;
-}) {
-  return (
-    <div className={`relative bg-white rounded-2xl border border-slate-200 p-5 shadow-sm overflow-hidden`}>
-      <div className={`absolute inset-0 bg-gradient-to-br ${tintStyles[tint]} pointer-events-none`} />
-      <div className="relative flex items-center gap-4">
-        <div className={`w-11 h-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center ${tintStyles[tint].split(' ').pop()}`}>
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">{value}</div>
-          <div className="text-sm font-medium text-slate-700 leading-tight">{label}</div>
-          {sub && <div className="text-xs text-slate-400 leading-tight">{sub}</div>}
+      <div className="mt-4">
+        <div className={`text-3xl font-bold ${t.value} tabular-nums tracking-tight leading-none`}>{value}</div>
+        <div className="mt-2">
+          <div className="text-sm font-semibold text-slate-900 leading-tight">{label}</div>
+          {sub && <div className="text-xs text-slate-500 leading-tight mt-0.5">{sub}</div>}
         </div>
       </div>
     </div>

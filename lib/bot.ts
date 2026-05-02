@@ -483,32 +483,67 @@ async function stepMachine(a: StepArgs) {
       if (slots.phone && !ctx.phone) ctx.phone = slots.phone;
       if (slots.province && !ctx.province) ctx.province = slots.province;
       if (slots.district && !ctx.district) ctx.district = slots.district;
-      if (slots.address && !ctx.address && slots.address.length >= 5) ctx.address = slots.address;
 
-      const hasCustomerSlots = !!(slots.phone || slots.address || slots.district || slots.province);
-      const addressNoiseRe = /(\d+\s*р?\s*хороо|\d+\s*тоот|\d+\s*байр|\d+\s*орц|\d+\s*давхар|хороо|тоот|байр|орц|давхар)/gi;
-      const searchCandidate = slots.remainingText.replace(addressNoiseRe, ' ').replace(/\s+/g, ' ').trim();
-      const hasProductCode = !!slots.productCode;
-      const hasProductHint = hasProductCode
-        || (!hasCustomerSlots && searchCandidate.length >= 2 && /[а-яөүёa-z]/i.test(searchCandidate));
+      const addressKeywordRe = /хороо|тоот|байр|орц|давхар/i;
+      const looksLikeAddress = addressKeywordRe.test(t);
+      if (
+        looksLikeAddress &&
+        slots.address &&
+        slots.address.length >= 10 &&
+        !ctx.address
+      ) {
+        ctx.address = slots.address;
+      }
 
-      if (!hasProductHint) {
-        const savedParts: string[] = [];
-        if (slots.phone) savedParts.push(`Утас: ${slots.phone}`);
-        if (slots.province) savedParts.push(`Аймаг: ${slots.province}`);
-        if (slots.district) savedParts.push(`Дүүрэг: ${slots.district}`);
-        if (slots.address) savedParts.push(`Хаяг: ${slots.address}`);
-        const prefix = hasCustomerSlots && savedParts.length
-          ? `Хадгалсан:\n${savedParts.join('\n')}\n\n`
-          : '';
-        await botSay(token, psid, convId,
-          `${prefix}Ямар бараа авахыг хүсч байна вэ? Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.`);
-        await updateState(convId, 'PRODUCT', ctx, cart);
-        return;
+      const intentWordsRe = /(авъя|авья|авна|авмаар|авии|авъя|захиалъя|захиалая|захиалах|awii|zahialay)/gi;
+      const hasPhoneOrAddressSlot = !!(slots.phone || ctx.address);
+
+      if (hasPhoneOrAddressSlot && !slots.productCode) {
+        const leftover = t
+          .replace(slots.phone || '', ' ')
+          .replace(/(\d+\s*р?\s*хороо|\d+\s*тоот|\d+\s*байр|\d+\s*орц|\d+\s*давхар|хороо|тоот|байр|орц|давхар)/gi, ' ')
+          .replace(intentWordsRe, ' ')
+          .replace(/\d+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        const hasLikelyProductText = /[а-яөүёa-z]{3,}/i.test(leftover);
+        if (!hasLikelyProductText) {
+          const savedParts: string[] = [];
+          if (slots.phone) savedParts.push(`Утас: ${slots.phone}`);
+          if (slots.province) savedParts.push(`Аймаг: ${slots.province}`);
+          if (slots.district) savedParts.push(`Дүүрэг: ${slots.district}`);
+          if (ctx.address) savedParts.push(`Хаяг: ${ctx.address}`);
+          const prefix = savedParts.length ? `Хадгалсан:\n${savedParts.join('\n')}\n\n` : '';
+          await botSay(
+            token,
+            psid,
+            convId,
+            `${prefix}Ямар бараа авахыг хүсч байна вэ? Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.`,
+          );
+          await updateState(convId, 'PRODUCT', ctx, cart);
+          return;
+        }
       }
 
       const priceRange = extractPriceRange(t);
-      const query = slots.productCode ?? searchCandidate;
+      let nameQuery = t.replace(intentWordsRe, ' ');
+      if (slots.phone) nameQuery = nameQuery.replace(slots.phone, ' ');
+      if (slots.extraPhone) nameQuery = nameQuery.replace(slots.extraPhone, ' ');
+      nameQuery = nameQuery
+        .replace(/(\d+\s*р?\s*хороо|\d+\s*тоот|\d+\s*байр|\d+\s*орц|\d+\s*давхар|хороо|тоот|байр|орц|давхар)/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const query = slots.productCode ?? (nameQuery.length >= 2 ? nameQuery : slots.remainingText);
+      if (!query || query.length < 2) {
+        await botSay(
+          token,
+          psid,
+          convId,
+          'Ямар бараа авахыг хүсч байна вэ? Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.',
+        );
+        await updateState(convId, 'PRODUCT', ctx, cart);
+        return;
+      }
       let products = await erpSearchProducts(erpConfig, query, 10);
 
       if (priceRange) {

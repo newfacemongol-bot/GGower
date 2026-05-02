@@ -499,16 +499,23 @@ async function stepMachine(a: StepArgs) {
       }
 
       const intentWordsRe = /(авъя|авья|авна|авмаар|авии|авъя|захиалъя|захиалая|захиалах|awii|zahialay)/gi;
-      const hasPhoneOrAddressSlot = !!(slots.phone || ctx.address);
+      const hasCustomerSlot = !!(slots.phone || slots.district || slots.province || ctx.address);
 
-      if (hasPhoneOrAddressSlot && !slots.productCode) {
-        const leftover = t
+      if (hasCustomerSlot && !slots.productCode) {
+        let leftover = t
           .replace(slots.phone || '', ' ')
           .replace(/(\d+\s*р?\s*хороо|\d+\s*тоот|\d+\s*байр|\d+\s*орц|\d+\s*давхар|хороо|тоот|байр|орц|давхар)/gi, ' ')
           .replace(intentWordsRe, ' ')
-          .replace(/\d+/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
+          .replace(/\d+/g, ' ');
+        if (slots.district) {
+          leftover = leftover.replace(new RegExp(slots.district, 'gi'), ' ');
+          leftover = leftover.replace(/\b(бзд|бгд|схд|сбд|худ|чд|хчд|bzd|bgd|shd|sxd|sbd|hud|xud|chd|hchd)\b/gi, ' ');
+        }
+        if (slots.province) {
+          leftover = leftover.replace(new RegExp(slots.province, 'gi'), ' ');
+          leftover = leftover.replace(/\bуб\b|\bub\b|\bулаанбаатар\b|\bулаанбаатар\s*хот\b|\bаймаг\b/gi, ' ');
+        }
+        leftover = leftover.replace(/\s+/g, ' ').trim();
         const hasLikelyProductText = /[а-яөүёa-z]{3,}/i.test(leftover);
         if (!hasLikelyProductText) {
           const savedParts: string[] = [];

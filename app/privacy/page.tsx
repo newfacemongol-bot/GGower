@@ -24,7 +24,7 @@ const MN: SectionContent[] = [
     items: [
       'Нэр, утасны дугаар, хаяг (захиалгад ашиглагдана)',
       'Facebook PSID (bot-той харилцахад ашиглагдана)',
-      'Мессеж, коммент болон харилцааны агуулга',
+      'Мессеж болон харилцааны агуулга',
     ],
   },
   {
@@ -48,7 +48,7 @@ const MN: SectionContent[] = [
   },
   {
     title: '5. Холбоо барих',
-    contact: { email: 'turbolddorlig@erpzahialga.com', phone: '+976 77774090' },
+    contact: { email: 'erpzahialga@gmail.com', phone: '+976 77774090' },
   },
 ];
 
@@ -63,7 +63,7 @@ const EN: SectionContent[] = [
     items: [
       'Name, phone number, and address (used for orders)',
       'Facebook PSID (used to interact with the bot)',
-      'Messages, comments, and conversation content',
+      'Messages and conversation content',
     ],
   },
   {
@@ -87,7 +87,7 @@ const EN: SectionContent[] = [
   },
   {
     title: '5. Contact',
-    contact: { email: 'turbolddorlig@erpzahialga.com', phone: '+976 77774090' },
+    contact: { email: 'erpzahialga@gmail.com', phone: '+976 77774090' },
   },
 ];
 

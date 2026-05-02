@@ -6,6 +6,7 @@ import {
   BOT_MESSAGE_DEFAULTS,
   getAllBotMessages,
   setBotMessage,
+  invalidateBotMessageCache,
   type BotMessageKey,
 } from '@/lib/bot-messages';
 
@@ -35,5 +36,6 @@ export async function PUT(req: NextRequest) {
     if (typeof u.value !== 'string') continue;
     await setBotMessage(u.key, u.value);
   }
+  invalidateBotMessageCache();
   return NextResponse.json({ ok: true });
 }

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, MessageCircle, ListOrdered, Settings, Database, Facebook, FileText, MessageSquare, FlaskConical } from 'lucide-react';
+import { LayoutDashboard, ListChecks, ListOrdered, Settings, Database, Facebook, FileText, MessageSquare, FlaskConical } from 'lucide-react';
 import LogoutButton from '@/components/logout-button';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -11,15 +11,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           <NavLink href="/admin/dashboard" icon={<LayoutDashboard className="w-4 h-4" />}>Хяналтын самбар / Dashboard</NavLink>
-          <NavLink href="/admin/comments" icon={<MessageCircle className="w-4 h-4" />}>Коммент / Comments</NavLink>
+          <NavLink href="/admin/comments" icon={<ListChecks className="w-4 h-4" />}>Needs Attention</NavLink>
           <NavLink href="/admin/queue" icon={<ListOrdered className="w-4 h-4" />}>Дараалал / Queue</NavLink>
           <NavLink href="/admin/settings" icon={<Settings className="w-4 h-4" />}>Тохиргоо / Settings</NavLink>
           <NavLink href="/admin/settings/erp" icon={<Database className="w-4 h-4" />}>ERP</NavLink>
           <NavLink href="/admin/settings/pages" icon={<Facebook className="w-4 h-4" />}>Facebook Пэйж / Pages</NavLink>
           <NavLink href="/admin/settings/templates" icon={<FileText className="w-4 h-4" />}>Бэлэн хариу / Templates</NavLink>
           <NavLink href="/admin/settings/messages" icon={<MessageSquare className="w-4 h-4" />}>Бот мессежүүд / Bot messages</NavLink>
-          <NavLink href="/admin/stress-test" icon={<FlaskConical className="w-4 h-4" />}>Стресс тест / Stress test</NavLink>
-          <NavLink href="/admin/comment-stress-test" icon={<MessageCircle className="w-4 h-4" />}>Коммент стресс тест / Comment stress test</NavLink>
+          <NavLink href="/admin/stress-test" icon={<FlaskConical className="w-4 h-4" />}>Test Data</NavLink>
+          <NavLink href="/admin/comment-stress-test" icon={<ListChecks className="w-4 h-4" />}>Test Data</NavLink>
         </nav>
         <div className="p-3 border-t border-slate-200">
           <LogoutButton />

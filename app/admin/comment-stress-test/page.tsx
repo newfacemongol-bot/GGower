@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, Circle as XCircle, Play, Trash2, Loader as Loader2, MessageCircle } from 'lucide-react';
+import { TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, Circle as XCircle, Play, Trash2, Loader as Loader2, ListChecks } from 'lucide-react';
 
 type TStatus = 'pass' | 'fail' | 'warn';
 
@@ -50,7 +50,7 @@ export default function CommentStressTestPage() {
   }
 
   async function cleanup() {
-    if (!confirm('Коммент тест өгөгдлийг устгах уу? / Delete comment test data?')) return;
+    if (!confirm('Delete test data?')) return;
     setCleaning(true);
     setCleanupMsg(null);
     try {
@@ -89,12 +89,12 @@ export default function CommentStressTestPage() {
     <div className="p-8 max-w-6xl mx-auto">
       <div className="mb-6 flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
-          <MessageCircle className="w-5 h-5 text-teal-600" />
+          <ListChecks className="w-5 h-5 text-teal-600" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Коммент бот стресс тест / Comment bot stress test</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Test Data</h1>
           <p className="text-sm text-slate-600">
-            Бодит өгөгдөл дээр үндэслэсэн: 30 пэйж, 1,719 коммент/өдөр, 72/цаг оргил / Based on real data: 30 pages, 1,719 comments/day, 72/hour peak
+            Automated test harness for internal capacity checks
           </p>
         </div>
       </div>
@@ -116,7 +116,7 @@ export default function CommentStressTestPage() {
           className="inline-flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-teal-700 disabled:opacity-50"
         >
           {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-          {running ? 'Ажиллаж байна... / Running...' : 'Коммент тест эхлэх / Start comment test'}
+          {running ? 'Running...' : 'Start Test'}
         </button>
 
         {results.length > 0 && !running && (
@@ -126,7 +126,7 @@ export default function CommentStressTestPage() {
             className="inline-flex items-center gap-2 border border-red-300 text-red-700 px-4 py-2.5 rounded-lg hover:bg-red-50 disabled:opacity-50"
           >
             {cleaning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            Коммент тест өгөгдөл устгах / Delete comment test data
+            Delete Test Data
           </button>
         )}
 
@@ -154,7 +154,7 @@ export default function CommentStressTestPage() {
       {results.length > 0 && (
         <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
           <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-            <h3 className="font-semibold text-slate-900 text-sm">Коммент тестийн үр дүн / Comment test results</h3>
+            <h3 className="font-semibold text-slate-900 text-sm">Test Results</h3>
           </div>
           <ul className="divide-y divide-slate-100">
             {results.map(r => (

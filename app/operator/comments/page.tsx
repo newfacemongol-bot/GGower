@@ -80,7 +80,7 @@ export default function OperatorCommentsPage() {
     <div className="h-screen overflow-auto">
       <div className="p-8 max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Коммент / Comments</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Needs Attention</h1>
           <span className="text-sm text-slate-500">{total.toLocaleString()} бичлэг / records</span>
         </div>
 
@@ -185,7 +185,7 @@ export default function OperatorCommentsPage() {
             );
           })}
           {!items.length && !loading && (
-            <div className="p-10 text-center text-slate-500 text-sm">Коммент байхгүй</div>
+            <div className="p-10 text-center text-slate-500 text-sm">No items</div>
           )}
           {loading && !items.length && (
             <div className="p-10 text-center text-slate-400 text-sm">Ачаалж байна...</div>

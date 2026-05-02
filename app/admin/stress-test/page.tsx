@@ -206,7 +206,7 @@ export default function StressTestPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Стресс тест / Stress test</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Test Data</h1>
         <p className="text-sm text-slate-600 mt-1">
           Chatbot-ийн бүх үндсэн логикийг шалгах автомат тест / Automated tests for all core chatbot logic
         </p>

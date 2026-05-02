@@ -39,7 +39,7 @@ export default function CommentsPage() {
   return (
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Коммент / Comments</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Needs Attention</h1>
         <span className="text-sm text-slate-500">{total.toLocaleString()} бичлэг / records</span>
       </div>
       <div className="flex flex-wrap gap-3 mb-4">
@@ -94,7 +94,7 @@ export default function CommentsPage() {
             }`}>{c.status}</span>
           </div>
         ))}
-        {!items.length && <div className="p-8 text-center text-slate-500 text-sm">Коммент байхгүй / No comments</div>}
+        {!items.length && <div className="p-8 text-center text-slate-500 text-sm">No items</div>}
       </div>
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
     </div>

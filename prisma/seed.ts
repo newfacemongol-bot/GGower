@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { INTEREST_REPLY_TEMPLATES, PRODUCT_REPLY_TEMPLATES } from '../lib/comment-filter';
 
 const prisma = new PrismaClient();
 
@@ -38,7 +39,20 @@ async function main() {
   const count = await prisma.commentReply.count();
   if (count === 0) {
     for (const text of DEFAULT_REPLIES) {
-      await prisma.commentReply.create({ data: { text } });
+      await prisma.commentReply.create({ data: { text, category: 'generic' } });
+    }
+  }
+
+  const interestCount = await prisma.commentReply.count({ where: { category: 'interest' } });
+  if (interestCount === 0) {
+    for (const text of INTEREST_REPLY_TEMPLATES) {
+      await prisma.commentReply.create({ data: { text, category: 'interest' } });
+    }
+  }
+  const productCount = await prisma.commentReply.count({ where: { category: 'product' } });
+  if (productCount === 0) {
+    for (const text of PRODUCT_REPLY_TEMPLATES) {
+      await prisma.commentReply.create({ data: { text, category: 'product' } });
     }
   }
 

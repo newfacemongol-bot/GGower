@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { replyToComment, reactToComment, sendText } from './lib/facebook';
-import { pickRandomReply } from './lib/comment-filter';
+import { pickReplyByCategory, detectCommentCategory } from './lib/comment-filter';
 import { erpCreateOrder } from './lib/erp';
 
 const prisma = new PrismaClient();
@@ -63,7 +63,15 @@ async function processOne() {
   }
 
   const replies = await prisma.commentReply.findMany({ where: { isActive: true } });
-  const replyText = pickRandomReply(replies.map((r) => r.text), candidate.senderName || undefined);
+  const detected = detectCommentCategory(candidate.commentText);
+  const productHint = candidate.productCode || '';
+  const category = detected === 'interest' && !productHint ? 'interest' : productHint ? 'product' : 'interest';
+  const replyText = pickReplyByCategory(
+    replies.map((r) => ({ text: r.text, category: (r as any).category ?? 'generic' })),
+    category,
+    candidate.senderName || undefined,
+    productHint || undefined,
+  );
 
   const ok = await replyToComment(page.accessToken, candidate.commentId, replyText);
 

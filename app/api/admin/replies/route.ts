@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!(await auth())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
   const item = await prisma.commentReply.create({
-    data: { text: body.text, isActive: body.isActive ?? true },
+    data: { text: body.text, isActive: body.isActive ?? true, category: body.category ?? 'generic' },
   });
   return NextResponse.json({ item });
 }

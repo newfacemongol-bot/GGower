@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const body = await req.json();
   const item = await prisma.commentReply.update({
     where: { id: params.id },
-    data: { text: body.text, isActive: body.isActive },
+    data: { text: body.text, isActive: body.isActive, ...(body.category !== undefined ? { category: body.category } : {}) },
   });
   return NextResponse.json({ item });
 }

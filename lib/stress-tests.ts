@@ -99,6 +99,8 @@ async function simulate(
   await prisma.conversation.deleteMany({ where: { psid } });
   for (const msg of messages) {
     await handleIncoming(pageId, psid, msg, 'Stress Test User');
+    const c = await prisma.conversation.findUnique({ where: { pageId_psid: { pageId, psid } } });
+    console.log(`[stress:${psid}] after "${msg}" => state=${c?.state} handoff=${c?.isOperatorHandoff} mis=${c?.misunderstandCount}`);
   }
   const conv = await prisma.conversation.findUnique({ where: { pageId_psid: { pageId, psid } } });
   return {
@@ -426,3 +428,6 @@ export async function cleanupStressTestData(): Promise<{ conversations: number; 
     orders: orders.count,
   };
 }
+
+
+export { cleanupStressTestData }

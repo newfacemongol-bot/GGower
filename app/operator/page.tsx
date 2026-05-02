@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert } from 'lucide-react';
+import { Send, Bot, User, LogOut, FileText, StickyNote, RotateCcw, ShieldAlert, Phone, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Template { id: string; title: string; text: string; shortcut: string | null; }
@@ -23,6 +23,9 @@ export default function OperatorPage() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [noteDraft, setNoteDraft] = useState('');
   const [editingNote, setEditingNote] = useState(false);
+  const [showPhones, setShowPhones] = useState(false);
+  const [phones, setPhones] = useState<any[]>([]);
+  const [phonesLoading, setPhonesLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -144,6 +147,17 @@ export default function OperatorPage() {
     if (activeId === id) loadConv(id);
   }
 
+  async function loadPhones() {
+    setPhonesLoading(true);
+    try {
+      const r = await fetch('/api/operator/comment-phones?hours=16');
+      const d = await r.json();
+      setPhones(d.items || []);
+    } finally {
+      setPhonesLoading(false);
+    }
+  }
+
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/');
@@ -154,7 +168,16 @@ export default function OperatorPage() {
       <aside className="w-80 bg-white border-r border-slate-200 flex flex-col">
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <h2 className="font-bold text-slate-900">Чат</h2>
-          <button onClick={logout} className="text-slate-500 hover:text-slate-900"><LogOut className="w-4 h-4" /></button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setShowPhones(true); loadPhones(); }}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+              title="Шөнийн утаснууд"
+            >
+              <Phone className="w-3 h-3" /> Утас
+            </button>
+            <button onClick={logout} className="text-slate-500 hover:text-slate-900"><LogOut className="w-4 h-4" /></button>
+          </div>
         </div>
         <div className="flex-1 overflow-auto divide-y divide-slate-100">
           {list.map((c) => (
@@ -304,6 +327,60 @@ export default function OperatorPage() {
           </>
         )}
       </main>
+
+      {showPhones && (
+        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={() => setShowPhones(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Phone className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-bold text-slate-900">Комментоос цуглуулсан утас</h3>
+                </div>
+                <div className="text-sm text-slate-600 mt-1">
+                  Сүүлийн 16 цагт <b>{phones.length}</b> утас цуглуулсан
+                </div>
+              </div>
+              <button onClick={() => setShowPhones(false)} className="text-slate-500 hover:text-slate-900"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {phonesLoading && <div className="p-8 text-center text-slate-500 text-sm">Ачааллаж байна...</div>}
+              {!phonesLoading && phones.length === 0 && (
+                <div className="p-8 text-center text-slate-500 text-sm">Утас олдсонгүй</div>
+              )}
+              <div className="divide-y divide-slate-100">
+                {phones.map((p) => (
+                  <div key={p.id} className="px-6 py-3 hover:bg-slate-50">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-slate-900">{p.senderName || 'Unknown'}</span>
+                          <span className="text-xs text-slate-500">{p.pageName}</span>
+                        </div>
+                        <div className="text-sm text-slate-700 line-clamp-2 mb-1">{p.commentText}</div>
+                        {p.postLink && (
+                          <a href={p.postLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                            Постыг харах
+                          </a>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="font-mono font-bold text-slate-900 mb-1">{p.phone}</div>
+                        <a
+                          href={`tel:${p.phone}`}
+                          className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                        >
+                          <Phone className="w-3 h-3" /> Дуудах
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

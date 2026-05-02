@@ -83,9 +83,13 @@ export async function replyToComment(pageAccessToken: string, commentId: string,
   }
 }
 
-export async function reactToComment(pageAccessToken: string, commentId: string): Promise<boolean> {
+export async function reactToComment(
+  pageAccessToken: string,
+  commentId: string,
+  type: 'LIKE' | 'LOVE' = 'LIKE',
+): Promise<boolean> {
   try {
-    const res = await fetch(`${GRAPH}/${commentId}/reactions?access_token=${pageAccessToken}&type=LOVE`, {
+    const res = await fetch(`${GRAPH}/${commentId}/reactions?access_token=${pageAccessToken}&type=${type}`, {
       method: 'POST',
     });
     return res.ok;

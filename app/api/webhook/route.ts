@@ -4,6 +4,7 @@ import { verifySignature } from '@/lib/facebook';
 import { handleIncoming, handlePostback } from '@/lib/bot';
 import { isSpamComment } from '@/lib/comment-filter';
 import { extractPhone, extractProductCode } from '@/lib/product-code';
+import { reactToComment } from '@/lib/facebook';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,17 +56,8 @@ export async function POST(req: NextRequest) {
       if (!page || !page.isActive || !page.autoReplyEnabled) continue;
 
       try {
-        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const alreadyReplied = await prisma.commentLead.findFirst({
-          where: { pageId, senderFbId: v.from?.id ?? 'unknown', replied: true, repliedAt: { gte: dayAgo } },
-        });
-        if (alreadyReplied) continue;
-
-        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
-        const recent = await prisma.commentLead.count({
-          where: { pageId, senderFbId: v.from?.id ?? 'unknown', queuedAt: { gte: tenMinAgo } },
-        });
-        if (recent >= 3) continue;
+        const phone = extractPhone(text);
+        reactToComment(page.accessToken, v.comment_id, 'LIKE').catch(() => false);
 
         await prisma.commentLead.create({
           data: {
@@ -75,10 +67,11 @@ export async function POST(req: NextRequest) {
             senderName: v.from?.name,
             senderFbId: v.from?.id ?? 'unknown',
             commentText: text,
-            extractedPhone: extractPhone(text),
+            extractedPhone: phone,
             productCode: extractProductCode(text),
-            status: 'queued',
-            scheduledFor: new Date(Date.now() + 15000 + Math.floor(Math.random() * 45000)),
+            status: phone ? 'phone_collected' : 'no_phone',
+            replied: true,
+            repliedAt: new Date(),
           },
         });
       } catch (e: any) {

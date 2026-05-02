@@ -19,6 +19,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <NavLink href="/admin/settings/templates" icon={<FileText className="w-4 h-4" />}>Бэлэн хариу</NavLink>
           <NavLink href="/admin/settings/messages" icon={<MessageSquare className="w-4 h-4" />}>Бот мессежүүд</NavLink>
           <NavLink href="/admin/stress-test" icon={<FlaskConical className="w-4 h-4" />}>Стресс тест</NavLink>
+          <NavLink href="/admin/comment-stress-test" icon={<MessageCircle className="w-4 h-4" />}>Коммент стресс тест</NavLink>
         </nav>
         <div className="p-3 border-t border-slate-200">
           <LogoutButton />

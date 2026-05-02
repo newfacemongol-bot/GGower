@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { MessageSquare, ListChecks, LogOut } from 'lucide-react';
+import { MessageSquare, LogOut } from 'lucide-react';
 
 export default function OperatorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,7 +19,6 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
 
   const links = [
     { href: '/operator', label: 'Chat', icon: MessageSquare },
-    { href: '/operator/comments', label: 'Needs Attention', icon: ListChecks },
   ];
 
   return (

@@ -204,7 +204,7 @@ export default function PagesAdminPage() {
       {deleting && (
         <ConfirmModal
           title="Пэйж устгах уу? / Delete page?"
-          message={`${deleting.pageName} пэйжийг устгах уу? / Delete this page?\nЭнэ пэйжийн бүх чат, коммент устахгүй — гэхдээ bot хариулахаа зогсоно.\nAll chats and comments remain, but the bot will stop replying.`}
+          message={`Delete page "${deleting.pageName}"?\nAll chats remain, but the bot will stop replying.`}
           confirmText="Тийм, устгах / Yes, delete"
           cancelText="Болих / Cancel"
           onCancel={() => setDeleting(null)}

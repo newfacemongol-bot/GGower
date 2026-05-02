@@ -92,12 +92,9 @@ export default function Dashboard() {
         <Stat label="Хүлээгдэж буй чат / Pending chats" value={stats?.pendingChats ?? 0} icon={<MessageCircle className="w-5 h-5" />} accent={stats && stats.pendingChats > 0 ? 'amber' : undefined} />
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <Stat label="Өнөөдрийн коммент / Today's comments" value={stats?.totalComments ?? 0} icon={<MessageSquare className="w-5 h-5" />} />
-        <Stat label="Хариулсан / Replied" value={stats?.repliedComments ?? 0} icon={<CheckCircle2 className="w-5 h-5" />} />
-        <Stat label="Дараалал / Queue" value={stats?.queuedComments ?? 0} icon={<Clock className="w-5 h-5" />} />
-        <Stat label="Орхисон сагс / Abandoned carts" value={stats?.abandonedCarts ?? 0} icon={<ShoppingCart className="w-5 h-5" />} accent={stats && stats.abandonedCarts > 0 ? 'amber' : undefined} />
-        <Stat label="Амжилтгүй захиалга / Failed orders" value={stats?.failedOrders ?? 0} icon={<TriangleAlert className="w-5 h-5" />} accent={stats && stats.failedOrders > 0 ? 'rose' : undefined} />
+      <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-4 mb-8">
+        <Stat label="Abandoned carts" value={stats?.abandonedCarts ?? 0} icon={<ShoppingCart className="w-5 h-5" />} accent={stats && stats.abandonedCarts > 0 ? 'amber' : undefined} />
+        <Stat label="Failed orders" value={stats?.failedOrders ?? 0} icon={<TriangleAlert className="w-5 h-5" />} accent={stats && stats.failedOrders > 0 ? 'rose' : undefined} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-4 mb-8">
@@ -155,14 +152,14 @@ export default function Dashboard() {
 
       <div className="bg-white rounded-xl border border-slate-200">
         <div className="px-6 py-4 border-b border-slate-200">
-          <h2 className="font-semibold text-slate-900">Пэйж статистик / Page stats</h2>
+          <h2 className="font-semibold text-slate-900">Page Stats</h2>
         </div>
         <div className="divide-y divide-slate-200">
           {(stats?.pages ?? []).map((p) => (
             <div key={p.pageId} className="px-6 py-3 flex items-center justify-between">
               <span className="font-medium text-slate-900">{p.pageName}</span>
               <span className="text-sm text-slate-600">
-                {p.comments} коммент / comments · {p.conversations} яриа / chats
+                {p.conversations} chats
               </span>
             </div>
           ))}

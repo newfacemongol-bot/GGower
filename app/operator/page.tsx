@@ -342,9 +342,9 @@ export default function OperatorPage() {
             <button
               onClick={() => { setShowPhones(true); loadPhones(); }}
               className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-              title="Комментоос цуглуулсан / Collected from comments"
+              title="Customer phone numbers"
             >
-              <Phone className="w-3 h-3" /> Утас / Phone
+              <Phone className="w-3 h-3" /> Phone
             </button>
             <button onClick={logout} className="text-slate-500 hover:text-slate-900"><LogOut className="w-4 h-4" /></button>
           </div>
@@ -628,7 +628,7 @@ export default function OperatorPage() {
         <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={() => setShowPhones(false)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="font-bold text-slate-900">Коммент удирдлага / Comment panel</h3>
+              <h3 className="font-bold text-slate-900">Customer Data</h3>
               <button onClick={() => setShowPhones(false)} className="text-slate-500 hover:text-slate-900"><X className="w-5 h-5" /></button>
             </div>
             <div className="px-6 pt-3 border-b border-slate-200 flex gap-1">
@@ -636,14 +636,16 @@ export default function OperatorPage() {
                 onClick={() => setPhonesTab('phones')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${phonesTab === 'phones' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
               >
-                <span className="inline-flex items-center gap-1"><Phone className="w-4 h-4" /> Цуглуулсан утаснууд / Collected phones ({phones.length})</span>
+                <span className="inline-flex items-center gap-1"><Phone className="w-4 h-4" /> Phone numbers ({phones.length})</span>
               </button>
-              <button
-                onClick={() => setPhonesTab('hidden')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${phonesTab === 'hidden' ? 'border-red-600 text-red-700' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
-              >
-                <span className="inline-flex items-center gap-1"><EyeOff className="w-4 h-4" /> Нуугдсан коммент / Hidden comments ({hidden.length})</span>
-              </button>
+              {false && (
+                <button
+                  onClick={() => setPhonesTab('hidden')}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${phonesTab === 'hidden' ? 'border-red-600 text-red-700' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
+                >
+                  <span className="inline-flex items-center gap-1"><EyeOff className="w-4 h-4" /> Hidden ({hidden.length})</span>
+                </button>
+              )}
             </div>
             <div className="flex-1 overflow-auto">
               {phonesLoading && <div className="p-8 text-center text-slate-500 text-sm">Ачааллаж байна... / Loading...</div>}

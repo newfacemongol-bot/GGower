@@ -23,7 +23,7 @@ export default function QueuePage() {
             <div key={p.pageId} className="bg-white rounded-xl border border-slate-200 p-5">
               <div className="text-xs text-slate-500 uppercase">{p.pageName}</div>
               <div className="text-3xl font-bold text-slate-900 mt-1">{count}</div>
-              <div className="text-xs text-slate-600 mt-1">хязгаар / limit: {p.hourlyCommentLimit}/цаг / hr</div>
+              <div className="text-xs text-slate-600 mt-1">limit: {p.hourlyCommentLimit}/hr</div>
             </div>
           );
         })}

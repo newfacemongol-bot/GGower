@@ -388,7 +388,6 @@ export default function OperatorPage() {
                 ? counts.filter((c) => c.order?.createdAt && isToday(c.order.createdAt)).length
                 : counts.length;
               const active = activeTab === t.key;
-              const shortLabel = t.label.split(' / ')[0];
               return (
                 <button
                   key={t.key}
@@ -397,7 +396,7 @@ export default function OperatorPage() {
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-full whitespace-nowrap transition-all ${active ? `bg-slate-900 text-white font-semibold shadow-sm` : 'text-slate-600 hover:bg-slate-100'}`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`}></span>
-                  <span>{shortLabel}</span>
+                  <span>{t.label}</span>
                   <span className={`rounded-full px-1.5 text-[10px] font-semibold ${active ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>{count}</span>
                 </button>
               );

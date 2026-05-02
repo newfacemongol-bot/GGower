@@ -334,7 +334,7 @@ export async function* runAllTests(): AsyncGenerator<TestResult> {
       a('not handoff', false, r.handoff, r.handoff === false);
     });
     yield await runOne('T5.10', cat5, 'Misunderstand -> handoff', async (a) => {
-      await simulate('stress-test-T5.10', ['sdfghjkl', 'qwerty123', '????'], pageId);
+      await simulate('stress-test-T5.10', ['!!@@##$$', '***%%%^^^', '|||///\\\\'], pageId);
       const final = await prisma.conversation.findUnique({
         where: { pageId_psid: { pageId, psid: 'stress-test-T5.10' } },
         select: { misunderstandCount: true, isOperatorHandoff: true },

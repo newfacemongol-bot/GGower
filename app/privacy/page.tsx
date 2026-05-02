@@ -48,7 +48,7 @@ const MN: SectionContent[] = [
   },
   {
     title: '5. Холбоо барих',
-    contact: { email: 'turbolddorlig@gmail.com', phone: '+976 77774090' },
+    contact: { email: 'turbolddorlig@erpzahialga.com', phone: '+976 77774090' },
   },
 ];
 
@@ -87,7 +87,7 @@ const EN: SectionContent[] = [
   },
   {
     title: '5. Contact',
-    contact: { email: 'turbolddorlig@gmail.com', phone: '+976 77774090' },
+    contact: { email: 'turbolddorlig@erpzahialga.com', phone: '+976 77774090' },
   },
 ];
 

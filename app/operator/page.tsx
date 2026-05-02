@@ -274,7 +274,7 @@ export default function OperatorPage() {
 
   async function resetConv(id: string, e?: React.MouseEvent) {
     e?.stopPropagation();
-    if (!confirm('Энэ харилцан яриаг дахин эхлүүлэх үү? / Reset this conversation?')) return;
+    if (!confirm('Restart this chat?')) return;
     await fetch(`/api/operator/conversations/${id}/reset`, { method: 'POST' });
     loadList();
     if (activeId === id) loadConv(id);
@@ -513,9 +513,9 @@ export default function OperatorPage() {
                     <button
                       onClick={(e) => resetConv(c.id, e)}
                       className="inline-flex items-center gap-1 text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-100 text-slate-700"
-                      title="Харилцан яриаг дахин эхлүүлэх / Reset conversation"
+                      title="Restart Chat"
                     >
-                      <RotateCcw className="w-3 h-3" /> Дахин эхлэх / Reset
+                      <RotateCcw className="w-3 h-3" /> Restart Chat
                     </button>
                     {c.isSpam && (
                       <button
@@ -987,7 +987,7 @@ function CustomerInfoPanel({ conv, onReset, onCreateOrder }: CustomerPanelProps)
           onClick={onReset}
           className="w-full inline-flex items-center justify-center gap-2 text-sm px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700"
         >
-          <RotateCcw className="w-4 h-4" /> Дахин эхлэх / Reset
+          <RotateCcw className="w-4 h-4" /> Restart Chat
         </button>
         {phone && (
           <a

@@ -485,10 +485,12 @@ async function stepMachine(a: StepArgs) {
       if (slots.district && !ctx.district) ctx.district = slots.district;
       if (slots.address && !ctx.address && slots.address.length >= 5) ctx.address = slots.address;
 
-      const addressNoiseRe = /\b(\d+\s*р?\s*хороо|\d+\s*тоот|\d+\s*байр|\d+\s*орц|\d+\s*давхар|хороо|тоот|байр|орц|давхар)\b/gi;
-      const searchCandidate = slots.remainingText.replace(addressNoiseRe, '').replace(/\s+/g, ' ').trim();
-      const hasProductHint = !!slots.productCode || (searchCandidate.length >= 2 && /[а-яөүёa-z]/i.test(searchCandidate));
-      const hasOtherSlots = !!(slots.phone || slots.province || slots.district || slots.address);
+      const hasCustomerSlots = !!(slots.phone || slots.address || slots.district || slots.province);
+      const addressNoiseRe = /(\d+\s*р?\s*хороо|\d+\s*тоот|\d+\s*байр|\d+\s*орц|\d+\s*давхар|хороо|тоот|байр|орц|давхар)/gi;
+      const searchCandidate = slots.remainingText.replace(addressNoiseRe, ' ').replace(/\s+/g, ' ').trim();
+      const hasProductCode = !!slots.productCode;
+      const hasProductHint = hasProductCode
+        || (!hasCustomerSlots && searchCandidate.length >= 2 && /[а-яөүёa-z]/i.test(searchCandidate));
 
       if (!hasProductHint) {
         const savedParts: string[] = [];
@@ -496,7 +498,7 @@ async function stepMachine(a: StepArgs) {
         if (slots.province) savedParts.push(`Аймаг: ${slots.province}`);
         if (slots.district) savedParts.push(`Дүүрэг: ${slots.district}`);
         if (slots.address) savedParts.push(`Хаяг: ${slots.address}`);
-        const prefix = hasOtherSlots && savedParts.length
+        const prefix = hasCustomerSlots && savedParts.length
           ? `Хадгалсан:\n${savedParts.join('\n')}\n\n`
           : '';
         await botSay(token, psid, convId,

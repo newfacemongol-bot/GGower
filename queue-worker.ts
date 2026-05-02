@@ -13,6 +13,47 @@ const REMINDER_23_DELAY_MS = 23 * ONE_HOUR_MS;
 const FACEBOOK_WINDOW_MS = 24 * ONE_HOUR_MS;
 const MAX_ORDER_RETRY = 3;
 
+const PEAK_HOURLY_LIMIT = 40;
+const OFFPEAK_HOURLY_LIMIT = 50;
+const PEAK_DELAY_MIN_MS = 45_000;
+const PEAK_DELAY_MAX_MS = 120_000;
+const OFFPEAK_DELAY_MIN_MS = 30_000;
+const OFFPEAK_DELAY_MAX_MS = 90_000;
+const SAME_PAGE_COOLDOWN_MS = 2 * 60_000;
+const PER_PAGE_DAILY_LIMIT = 500;
+const GLOBAL_DAILY_LIMIT = 15_000;
+
+const lastReplyByPage = new Map<string, number>();
+let lastRepliedPageId: string | null = null;
+let nextAllowedSendAt = 0;
+
+type TrafficWindow = 'peak' | 'offpeak' | 'night';
+
+function currentWindow(): TrafficWindow {
+  const h = new Date().getHours();
+  if (h >= 22 || h < 8) return 'night';
+  if (h >= 10 && h < 16) return 'peak';
+  return 'offpeak';
+}
+
+function windowLimits(w: TrafficWindow): { hourly: number; minDelay: number; maxDelay: number } {
+  if (w === 'peak') return { hourly: PEAK_HOURLY_LIMIT, minDelay: PEAK_DELAY_MIN_MS, maxDelay: PEAK_DELAY_MAX_MS };
+  return { hourly: OFFPEAK_HOURLY_LIMIT, minDelay: OFFPEAK_DELAY_MIN_MS, maxDelay: OFFPEAK_DELAY_MAX_MS };
+}
+
+function randomDelay(min: number, max: number): number {
+  return min + Math.floor(Math.random() * (max - min));
+}
+
+function nextMorning8(): Date {
+  const d = new Date();
+  if (d.getHours() >= 8 && d.getHours() < 22) return d;
+  const next = new Date(d);
+  if (d.getHours() >= 22) next.setDate(d.getDate() + 1);
+  next.setHours(8, 0, 0, 0);
+  return next;
+}
+
 async function getSetting(key: string, fallback: string): Promise<string> {
   const s = await prisma.setting.findUnique({ where: { key } });
   return s?.value ?? fallback;
@@ -31,18 +72,59 @@ async function isNightMode(): Promise<boolean> {
 async function processOne() {
   const botEnabled = (await getSetting('bot_enabled', 'true')) === 'true';
   if (!botEnabled) return;
-  if (await isNightMode()) return;
+
+  const window = currentWindow();
+  if (window === 'night' || (await isNightMode())) {
+    await prisma.commentLead.updateMany({
+      where: { status: 'queued', OR: [{ scheduledFor: null }, { scheduledFor: { lte: new Date() } }] },
+      data: { scheduledFor: nextMorning8() },
+    });
+    return;
+  }
+
+  const nowMs = Date.now();
+  if (nowMs < nextAllowedSendAt) return;
 
   const now = new Date();
-  const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const hourAgo = new Date(nowMs - ONE_HOUR_MS);
+  const dayAgo = new Date(nowMs - 24 * ONE_HOUR_MS);
 
-  const candidate = await prisma.commentLead.findFirst({
-    where: {
-      status: 'queued',
-      OR: [{ scheduledFor: null }, { scheduledFor: { lte: now } }],
-    },
-    orderBy: { scheduledFor: 'asc' },
+  const globalSentToday = await prisma.commentLead.count({
+    where: { status: 'sent', sentAt: { gte: dayAgo } },
   });
+  if (globalSentToday >= GLOBAL_DAILY_LIMIT) {
+    await prisma.commentLead.updateMany({
+      where: { status: 'queued', OR: [{ scheduledFor: null }, { scheduledFor: { lte: now } }] },
+      data: { scheduledFor: new Date(nowMs + ONE_HOUR_MS) },
+    });
+    return;
+  }
+
+  const limits = windowLimits(window);
+
+  const queued = await prisma.commentLead.findMany({
+    where: { status: 'queued', OR: [{ scheduledFor: null }, { scheduledFor: { lte: now } }] },
+    orderBy: { scheduledFor: 'asc' },
+    take: 50,
+  });
+  if (queued.length === 0) return;
+
+  let candidate: typeof queued[number] | null = null;
+  for (const c of queued) {
+    if (c.pageId === lastRepliedPageId) continue;
+    const last = lastReplyByPage.get(c.pageId) ?? 0;
+    if (nowMs - last < SAME_PAGE_COOLDOWN_MS) continue;
+    candidate = c;
+    break;
+  }
+  if (!candidate) {
+    for (const c of queued) {
+      const last = lastReplyByPage.get(c.pageId) ?? 0;
+      if (nowMs - last < SAME_PAGE_COOLDOWN_MS) continue;
+      candidate = c;
+      break;
+    }
+  }
   if (!candidate) return;
 
   const page = await prisma.facebookPage.findUnique({ where: { pageId: candidate.pageId } });
@@ -51,13 +133,25 @@ async function processOne() {
     return;
   }
 
+  const sentToday = await prisma.commentLead.count({
+    where: { pageId: page.pageId, status: 'sent', sentAt: { gte: dayAgo } },
+  });
+  if (sentToday >= PER_PAGE_DAILY_LIMIT) {
+    await prisma.commentLead.update({
+      where: { id: candidate.id },
+      data: { scheduledFor: new Date(nowMs + ONE_HOUR_MS) },
+    });
+    return;
+  }
+
   const sentThisHour = await prisma.commentLead.count({
     where: { pageId: page.pageId, status: 'sent', sentAt: { gte: hourAgo } },
   });
-  if (sentThisHour >= page.hourlyCommentLimit) {
+  const pageLimit = Math.min(page.hourlyCommentLimit, limits.hourly);
+  if (sentThisHour >= pageLimit) {
     await prisma.commentLead.update({
       where: { id: candidate.id },
-      data: { scheduledFor: new Date(Date.now() + 60 * 60 * 1000) },
+      data: { scheduledFor: new Date(nowMs + ONE_HOUR_MS) },
     });
     return;
   }
@@ -90,7 +184,13 @@ async function processOne() {
     },
   });
 
-  console.log(`[queue] ${ok ? 'sent' : 'failed'} reply to ${candidate.commentId} (${page.pageName})`);
+  if (ok) {
+    lastRepliedPageId = page.pageId;
+    lastReplyByPage.set(page.pageId, Date.now());
+    nextAllowedSendAt = Date.now() + randomDelay(limits.minDelay, limits.maxDelay);
+  }
+
+  console.log(`[queue] ${ok ? 'sent' : 'failed'} reply to ${candidate.commentId} (${page.pageName}) window=${window}`);
 }
 
 async function processReminders() {

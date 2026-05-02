@@ -37,14 +37,35 @@ export function extractBareProductCode(text: string): string | null {
 }
 
 export function extractPhone(text: string): string | null {
-  const cleaned = text.replace(/[^\d]/g, '');
+  let s = text.replace(/\s+|-/g, '');
+  s = s.replace(/^\+?976/, '');
+  const cleaned = s.replace(/[^\d]/g, '');
   const match = cleaned.match(/([789]\d{7})/);
   return match ? match[1] : null;
 }
 
-export function isOrderIntent(text: string): boolean {
+export function isPhoneOnlyMessage(text: string): string | null {
+  const t = text.trim();
+  const stripped = t.replace(/\s+|-/g, '').replace(/^\+?976/, '');
+  if (!/^\d{8}$/.test(stripped)) return null;
+  if (!/^[789]/.test(stripped)) return null;
+  return stripped;
+}
+
+export function isCancellationIntent(text: string): boolean {
   const t = text.toLowerCase();
-  return /захиалах|захиалга|захиалмаар|захиалъя|захиалая|захиалаад|авмаар|авъя|авая|авмар|zahialah|zahialga|zahialmaar|avmaar|avya/.test(t);
+  return /цуцал|авахгүй|болихоо|болих болсон|цуцальяа|цуцалъя|болилоо|болихоо болсон|авахгүй болсон|авахгүй боллоо/.test(t);
+}
+
+export function isQuestionIntent(text: string): boolean {
+  const t = text.toLowerCase();
+  return /хэд вэ|хэмжээ|болох уу|байна уу|хүргэх үү|зураг|үнэ хэд/.test(t);
+}
+
+export function isOrderIntent(text: string): boolean {
+  const t = text.toLowerCase().trim();
+  if (/^(ok|ок|hi|hello|за|тийм|болно)\.?$/.test(t)) return true;
+  return /захиалах|захиалга|захиалмаар|захиалъя|захиалая|захиалаад|авмаар|авъя|авая|авмар|авна|хэрэгтэй|болж байна уу|zahialah|zahialga|zahialmaar|zahialay|zahialya|avmaar|avya|away|awii|avii/.test(t);
 }
 
 export function isBareOrderIntent(text: string): boolean {

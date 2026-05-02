@@ -68,6 +68,9 @@ export function extractSlots(text: string, opts: { productSelected: boolean; wan
     prefixedCodes.push(`${L}-${padCode(m[2])}`);
   }
 
+  working = working.replace(/\+?976[\s-]*([789]\d[\s-]*\d{2}[\s-]*\d{2}[\s-]*\d{2})/g, (_m, g1) => g1.replace(/[\s-]/g, ''));
+  working = working.replace(/([789]\d)[\s-]+(\d{2})[\s-]+(\d{2})[\s-]+(\d{2})/g, '$1$2$3$4');
+
   const digitTokens: { value: string; index: number }[] = [];
   const tokenRe = /\d+/g;
   while ((m = tokenRe.exec(working))) {
@@ -137,12 +140,7 @@ export function extractSlots(text: string, opts: { productSelected: boolean; wan
   }
   remaining = stripResetKeywords(remaining);
   remaining = remaining.replace(/\s+/g, ' ').trim();
-  const hasAddressMarkers = /(хороо|тоот|байр|орц|давхар|гудамж|хотхон|хашаа|street|apt|building)/i.test(remaining);
-  const wordCount = remaining.split(/\s+/).filter(Boolean).length;
-  if (
-    /[а-яөүёa-z]/i.test(remaining) &&
-    (hasAddressMarkers || (remaining.length >= 10 && wordCount >= 2))
-  ) {
+  if (remaining.length >= 3 && /[а-яөүёa-z0-9]/i.test(remaining)) {
     result.address = remaining;
   }
   result.remainingText = remaining;

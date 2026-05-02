@@ -1,7 +1,7 @@
 import { prisma } from './prisma';
 import { sendText, sendCarousel, sendImage, sendSenderAction, fetchUserProfile } from './facebook';
 import { erpSearchProducts, erpGetProduct, erpCreateOrder, erpSearchOrders, type ErpConfigShape, type ErpProduct } from './erp';
-import { extractProductCode, extractPhone, isOrderIntent, isBareOrderIntent } from './product-code';
+import { extractProductCode, extractPhone, isOrderIntent, isBareOrderIntent, isPhoneOnlyMessage, isCancellationIntent } from './product-code';
 import { latinToCyrillic } from './translit';
 import { PROVINCES, UB_DISTRICTS, isUB, normalizeProvince, normalizeDistrict } from './provinces';
 import { extractSlots } from './slot-extract';
@@ -129,6 +129,12 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
     return;
   }
 
+  if (isCancellationIntent(lowered)) {
+    await botSay(page.accessToken, psid, conv.id, await getBotMessage('order_cancelled'));
+    await updateState(conv.id, 'IDLE', {}, []);
+    return;
+  }
+
   if (/захиалга.*хаана|хаана байна|захиалга шалгах|захиалга хянах|order status|миний захиалга/.test(lowered)) {
     await handleOrderStatusRequest(page, conv.id, psid, text);
     return;
@@ -199,7 +205,22 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
     return;
   }
 
-  if (state !== 'IDLE' && state !== 'PRODUCT' && state !== 'CONFIRM') {
+  if (state === 'IDLE') {
+    const phoneOnly = isPhoneOnlyMessage(text);
+    if (phoneOnly && !detectedCode) {
+      ctx.phone = phoneOnly;
+      await botSay(page.accessToken, psid, conv.id, await getBotMessage('phone_received_ask_product'));
+      await updateState(conv.id, 'PRODUCT', ctx, cart);
+      return;
+    }
+    if (isOrderIntent(text) && !detectedCode) {
+      await botSay(page.accessToken, psid, conv.id, await getBotMessage('phone_received_ask_product'));
+      await updateState(conv.id, 'PRODUCT', ctx, cart);
+      return;
+    }
+  }
+
+  if (state !== 'CONFIRM') {
     const slots = extractSlots(text, {
       productSelected: !!ctx.selectedProduct || cart.length > 0,
       wantPhone: state === 'PHONE',
@@ -214,7 +235,7 @@ export async function handleIncoming(pageId: string, psid: string, text: string,
     }
     if (slots.province && !ctx.province) ctx.province = slots.province;
     if (slots.district && !ctx.district) ctx.district = slots.district;
-    if (slots.address && !ctx.address && slots.address.length >= 5) ctx.address = slots.address;
+    if (slots.address && !ctx.address && slots.address.length >= 3) ctx.address = slots.address;
   }
 
   await stepMachine({ page, erpConfig, convId: conv.id, psid, state, ctx, cart, text });
@@ -718,9 +739,22 @@ async function submitOrder(page: any, erpConfig: ErpConfigShape | null, convId: 
   const when = await getDeliveryMessage();
   const loc = [ctx.province, ctx.district, ctx.address].filter(Boolean).join(', ');
   const itemList = cart.map((c) => `${c.product.name} x ${c.quantity}ш`).join(', ');
-  await botSay(page.accessToken, psid, convId,
-    `${await getBotMessage('order_success')}\n${itemList}\n${loc}-д ${when} хүргэнэ`,
-    ['Шинэ захиалга', 'Захиалга хянах']);
+  const totalQty = cart.reduce((s, c) => s + c.quantity, 0);
+  const firstProductName = cart[0]?.product.name ?? '';
+  const template = await getBotMessage('order_success');
+  const successMsg = template
+    .replace(/\{productName\}/g, cart.length > 1 ? itemList : firstProductName)
+    .replace(/\{quantity\}/g, String(totalQty))
+    .replace(/\{address\}/g, loc)
+    .replace(/\{deliveryTime\}/g, when);
+  await botSay(page.accessToken, psid, convId, successMsg, ['Шинэ захиалга', 'Захиалга хянах']);
+
+  if (ctx.province && !isUB(ctx.province)) {
+    const aimagMsg = await getBotMessage('aimag_payment');
+    if (aimagMsg) {
+      await botSay(page.accessToken, psid, convId, aimagMsg);
+    }
+  }
   await updateState(convId, 'DONE', {}, []);
 }
 

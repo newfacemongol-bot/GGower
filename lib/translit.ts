@@ -23,9 +23,50 @@ function hasLatin(s: string): boolean {
   return /[a-zA-Z]/.test(s);
 }
 
+const WORD_MAP: [RegExp, string][] = [
+  [/\bzahialay\b/gi, 'захиалая'],
+  [/\bzahialya\b/gi, 'захиалая'],
+  [/\bzahialga\b/gi, 'захиалга'],
+  [/\bzahialah\b/gi, 'захиалах'],
+  [/\bzahialmaar\b/gi, 'захиалмаар'],
+  [/\bawii\b/gi, 'авъя'],
+  [/\bavii\b/gi, 'авъя'],
+  [/\bavya\b/gi, 'авъя'],
+  [/\baway\b/gi, 'авъя'],
+  [/\bavmaar\b/gi, 'авмаар'],
+  [/\bbairaas\b/gi, 'байраас'],
+  [/\bbair\b/gi, 'байр'],
+  [/\btoot\b/gi, 'тоот'],
+  [/\bhoroo\b/gi, 'хороо'],
+  [/\borts\b/gi, 'орц'],
+  [/\bdavhar\b/gi, 'давхар'],
+  [/\bcorpus\b/gi, 'корпус'],
+  [/\bkorpus\b/gi, 'корпус'],
+  [/\bblock\b/gi, 'блок'],
+  [/\bblok\b/gi, 'блок'],
+  [/\bsain\b/gi, 'сайн'],
+  [/\bb\.z\.d\b/gi, 'бзд'],
+  [/\bb\.g\.d\b/gi, 'бгд'],
+  [/\bs\.h\.d\b/gi, 'схд'],
+  [/\bs\.b\.d\b/gi, 'сбд'],
+  [/\bh\.u\.d\b/gi, 'худ'],
+  [/\bch\.d\b/gi, 'чд'],
+  [/\bbzd\b/gi, 'бзд'],
+  [/\bbgd\b/gi, 'бгд'],
+  [/\bshd\b/gi, 'схд'],
+  [/\bsxd\b/gi, 'схд'],
+  [/\bsbd\b/gi, 'сбд'],
+  [/\bhud\b/gi, 'худ'],
+  [/\bxud\b/gi, 'худ'],
+  [/\bchd\b/gi, 'чд'],
+];
+
 export function latinToCyrillic(text: string): string {
   if (!hasLatin(text)) return text;
   let out = text;
+  for (const [re, rep] of WORD_MAP) {
+    out = out.replace(re, rep);
+  }
   for (const [re, rep] of DIGRAPH_MAP) {
     out = out.replace(re, (m) => (m[0] === m[0].toUpperCase() ? rep.toUpperCase() : rep));
   }

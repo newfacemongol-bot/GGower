@@ -15,25 +15,31 @@ export const BOT_MESSAGE_KEYS = [
   'operator_handoff',
   'session_timeout',
   'duplicate_order',
+  'order_cancelled',
+  'aimag_payment',
+  'phone_received_ask_product',
 ] as const;
 
 export type BotMessageKey = (typeof BOT_MESSAGE_KEYS)[number];
 
 export const BOT_MESSAGE_DEFAULTS: Record<BotMessageKey, string> = {
-  welcome: 'Сайн байна уу! 👋 Би захиалга авах бот байна. Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.',
+  welcome: 'Сайн байна уу! 👋 Ямар бараа авахыг хүсч байна вэ? Бүтээгдэхүүний код эсвэл нэрийг бичнэ үү.',
   product_not_found: 'Уучлаарай, бүтээгдэхүүн олдсонгүй. Код эсвэл нэрийг шалгаад дахин бичнэ үү.',
   ask_quantity: 'Хэдэн ширхэг авах вэ?',
-  ask_phone: 'Холбоо барих утасны дугаараа оруулна уу:',
+  ask_phone: 'Холбоо барих утасны дугаараа оруулна уу: (8 оронтой)',
   ask_extra_phone: 'Нэмэлт утасны дугаар байна уу?',
   ask_province: 'Хүргэлт хаашаа вэ?',
   ask_district: 'Аль дүүрэгт хүргэх вэ?',
-  ask_address: 'Дэлгэрэнгүй хаягаа бичнэ үү (хороо, байр, тоот).',
+  ask_address: 'Хүргүүлэх хаягаа бичнэ үү:\n(Дүүрэг, хороо, байр, тоот)',
   ask_note: 'Нэмэлт тэмдэглэл байна уу?',
-  order_success: '✅ Таны захиалга амжилттай бүртгэгдлээ! Удахгүй холбогдох болно.',
+  order_success: '✅ Таны захиалга амжилттай бүртгэгдлээ!\n📦 {productName} x {quantity}ш\n📍 {address}-д {deliveryTime} хүргэнэ\n📞 Хүргэлтийн өмнө холбоо барих болно\nБаярлалаа! 🙏',
   order_fail: '⚠️ Түр саатал. Оператор тантай холбогдох болно.',
-  operator_handoff: 'Операторт холбож байна... ⏳',
+  operator_handoff: 'Операторт холбож байна... ⏳ Удахгүй холбогдох болно.',
   session_timeout: 'Таны session дууссан. Шинээр эхлэхийн тулд "шинэ захиалга" гэж бичнэ үү.',
   duplicate_order: '⚠️ Энэ утасны дугаараар идэвхтэй захиалга байна. Оператор тантай холбогдох болно.',
+  order_cancelled: 'Ойлголоо, захиалгыг цуцаллаа. Дахин захиалах бол мессеж илгээнэ үү 😊',
+  aimag_payment: 'Орон нутгийн захиалгад урьдчилж төлбөр шилжүүлнэ үү. Оператор тантай холбогдох болно. Баярлалаа! 🙏',
+  phone_received_ask_product: 'Ямар бараа авахыг хүсч байна вэ? 😊\nБүтээгдэхүүний код эсвэл нэрийг бичнэ үү.',
 };
 
 export const BOT_MESSAGE_LABELS: Record<BotMessageKey, string> = {
@@ -51,6 +57,9 @@ export const BOT_MESSAGE_LABELS: Record<BotMessageKey, string> = {
   operator_handoff: 'Операторт шилжүүлэх',
   session_timeout: 'Session дууссан',
   duplicate_order: 'Давхар захиалга',
+  order_cancelled: 'Захиалга цуцалсан',
+  aimag_payment: 'Орон нутгийн урьдчилгаа төлбөр',
+  phone_received_ask_product: 'Утас хүлээн авсан / бараа асуух',
 };
 
 const CACHE_TTL_MS = 60_000;

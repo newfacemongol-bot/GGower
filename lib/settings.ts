@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { setPersistentMenu } from './facebook';
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   bot_enabled: 'true',
@@ -29,6 +30,15 @@ export async function ensureDefaultSettings(): Promise<void> {
       });
     }
     defaultsEnsured = true;
+    // Best-effort: configure persistent menu for every active page once at startup.
+    try {
+      const activePages = await prisma.facebookPage.findMany({ where: { isActive: true } });
+      for (const p of activePages) {
+        setPersistentMenu(p.accessToken).catch(() => undefined);
+      }
+    } catch {
+      /* ignore */
+    }
   } catch {
     /* swallow - don't break startup on transient DB errors */
   }

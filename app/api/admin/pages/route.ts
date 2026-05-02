@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { setPersistentMenu } from '@/lib/facebook';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,5 +34,7 @@ export async function POST(req: NextRequest) {
       reactionEnabled: body.reactionEnabled ?? false,
     },
   });
+  // Best-effort: set persistent menu immediately when the page is registered.
+  setPersistentMenu(item.accessToken).catch(() => undefined);
   return NextResponse.json({ item });
 }

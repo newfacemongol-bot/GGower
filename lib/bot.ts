@@ -1,5 +1,5 @@
 import { prisma } from './prisma';
-import { sendText, sendCarousel, sendImage, sendSenderAction, fetchUserProfile } from './facebook';
+import { sendText, sendCarousel, sendImage, sendSenderAction, sendMessage, fetchUserProfile } from './facebook';
 import { erpSearchProducts, erpGetProduct, erpCreateOrder, erpSearchOrders, type ErpConfigShape, type ErpProduct } from './erp';
 import { extractProductCode, extractPhone, isOrderIntent, isBareOrderIntent, isPhoneOnlyMessage, isCancellationIntent } from './product-code';
 import { latinToCyrillic } from './translit';
@@ -919,7 +919,19 @@ async function submitOrder(page: any, erpConfig: ErpConfigShape | null, convId: 
     .replace(/\{quantity\}/g, String(totalQty))
     .replace(/\{address\}/g, loc)
     .replace(/\{deliveryTime\}/g, when);
-  await botSay(page.accessToken, psid, convId, successMsg, ['Шинэ захиалга', 'Захиалга хянах']);
+  await sendSenderAction(page.accessToken, psid, 'mark_seen');
+  await sendSenderAction(page.accessToken, psid, 'typing_on');
+  await new Promise((r) => setTimeout(r, 400));
+  await sendMessage(page.accessToken, psid, {
+    text: successMsg,
+    quick_replies: [
+      { content_type: 'text', title: '🛍️ Шинэ захиалга', payload: 'NEW_ORDER' },
+      { content_type: 'text', title: '📞 Оператортой холбогдох', payload: 'OPERATOR_HANDOFF' },
+    ],
+  });
+  await sendSenderAction(page.accessToken, psid, 'typing_off');
+  await prisma.message.create({ data: { conversationId: convId, text: successMsg, isFromBot: true } });
+  await prisma.conversation.update({ where: { id: convId }, data: { lastMessageAt: new Date() } });
 
   if (isAimag) {
     const aimagTpl = await getBotMessage('aimag_payment');
@@ -943,6 +955,59 @@ export async function handlePostback(pageId: string, psid: string, payload: stri
   if (!page) return;
   const conv = await prisma.conversation.findUnique({ where: { pageId_psid: { pageId, psid } } });
   if (!conv) return;
+
+  if (payload === 'CHECK_ORDER') {
+    const lastOrder = await prisma.order.findFirst({
+      where: { conversationId: conv.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!lastOrder) {
+      await botSay(
+        page.accessToken,
+        psid,
+        conv.id,
+        'Захиалга олдсонгүй.\nШинэ захиалга өгөхийг хүсвэл бүтээгдэхүүний код эсвэл нэр бичнэ үү.',
+      );
+      return;
+    }
+    const products = (lastOrder.products as any[]) || [];
+    const firstName = products[0]?.productName ?? '';
+    const totalQty = products.reduce((s, p) => s + (p.quantity || 0), 0);
+    const productLine = products.length > 1
+      ? products.map((p) => `${p.productName} x ${p.quantity}ш`).join(', ')
+      : `${firstName} x ${totalQty}ш`;
+    const addr = [lastOrder.province, lastOrder.district, lastOrder.address].filter(Boolean).join(', ');
+    const dateStr = new Intl.DateTimeFormat('mn-MN', {
+      timeZone: 'Asia/Ulaanbaatar',
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    }).format(lastOrder.createdAt);
+    const msg = [
+      '📦 Таны сүүлийн захиалга:',
+      `#${lastOrder.erpOrderNumber || lastOrder.id}`,
+      `🛍️ ${productLine}`,
+      `📍 ${addr}`,
+      `📅 ${dateStr}`,
+      '✅ Захиалга хүлээн авагдсан',
+    ].join('\n');
+    await botSay(page.accessToken, psid, conv.id, msg);
+    return;
+  }
+
+  if (payload === 'NEW_ORDER') {
+    await updateState(conv.id, 'IDLE', {}, []);
+    await botSay(page.accessToken, psid, conv.id, await getBotMessage('welcome'));
+    return;
+  }
+
+  if (payload === 'OPERATOR_HANDOFF') {
+    await prisma.conversation.update({
+      where: { id: conv.id },
+      data: { isOperatorHandoff: true, handoffReason: 'user_request', lastMessageAt: new Date(), unreadCount: { increment: 1 } },
+    });
+    await botSay(page.accessToken, psid, conv.id, 'Оператор удахгүй холбогдоно 😊');
+    await logAudit({ entityType: 'conversation', entityId: conv.id, action: 'handoff', actorRole: 'bot', meta: { reason: 'user_request', via: 'postback' } });
+    return;
+  }
 
   if (payload.startsWith('SELECT_') && page.erpConfig) {
     const productId = payload.slice(7);

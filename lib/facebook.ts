@@ -128,6 +128,34 @@ export async function reactToComment(
   }
 }
 
+export async function setPersistentMenu(pageAccessToken: string): Promise<{ ok: boolean; error?: string }> {
+  if (isStressTestMode()) return { ok: true };
+  try {
+    const res = await fetch(`${GRAPH_V25}/me/messenger_profile?access_token=${pageAccessToken}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        persistent_menu: [
+          {
+            locale: 'default',
+            composer_input_disabled: false,
+            call_to_actions: [
+              { type: 'postback', title: '📦 Захиалга хянах', payload: 'CHECK_ORDER' },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(() => '');
+      return { ok: false, error: err || `HTTP ${res.status}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
 export async function fetchUserProfile(pageAccessToken: string, psid: string): Promise<{ first_name?: string; last_name?: string } | null> {
   if (isStressTestMode() || psid.startsWith('stress-test-')) {
     return { first_name: 'Stress', last_name: 'Test' };

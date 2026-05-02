@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, ShieldCheck, ShieldAlert, ShieldQuestion, X, Loader as Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, ShieldCheck, ShieldAlert, ShieldQuestion, X, Loader as Loader2, Menu as MenuIcon } from 'lucide-react';
 
 interface PageItem {
   id: string; pageId: string; pageName: string; accessToken: string;
@@ -31,6 +31,21 @@ export default function PagesAdminPage() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<PageItem | null>(null);
   const [deleting, setDeleting] = useState<PageItem | null>(null);
+  const [menuBusy, setMenuBusy] = useState<string | null>(null);
+
+  async function configureMenu(p: PageItem) {
+    setMenuBusy(p.id);
+    try {
+      const r = await fetch(`/api/admin/pages/${p.id}/persistent-menu`, { method: 'POST' });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.ok) toast.success('Persistent Menu тохируулагдлаа');
+      else toast.error(d.error || 'Тохируулж чадсангүй');
+    } catch {
+      toast.error('Холбогдсонгүй');
+    } finally {
+      setMenuBusy(null);
+    }
+  }
 
   async function load() {
     const [pR, eR] = await Promise.all([fetch('/api/admin/pages'), fetch('/api/admin/erp')]);
@@ -108,6 +123,14 @@ export default function PagesAdminPage() {
                   <div className="text-xs text-slate-500 mt-0.5">Token: <span className="font-mono">{tokenMasked}</span></div>
                 </div>
                 <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => configureMenu(p)}
+                    disabled={menuBusy === p.id}
+                    className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700 disabled:opacity-50"
+                    title="Messenger-ийн доод цэсэнд 'Захиалга хянах' товчийг тохируулна"
+                  >
+                    {menuBusy === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MenuIcon className="w-3.5 h-3.5" />} Persistent Menu тохируулах
+                  </button>
                   <button
                     onClick={() => setEditing(p)}
                     className="inline-flex items-center gap-1 text-sm px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700"

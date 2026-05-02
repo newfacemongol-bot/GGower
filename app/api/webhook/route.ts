@@ -39,7 +39,10 @@ export async function POST(req: NextRequest) {
       const psid = event.sender?.id;
       if (!psid) continue;
       if (event.message?.is_echo) continue;
-      if (event.message?.text) {
+      const qrPayload = event.message?.quick_reply?.payload;
+      if (qrPayload && (qrPayload === 'CHECK_ORDER' || qrPayload === 'NEW_ORDER' || qrPayload === 'OPERATOR_HANDOFF')) {
+        await handlePostback(pageId, psid, qrPayload).catch(console.error);
+      } else if (event.message?.text) {
         await handleIncoming(pageId, psid, event.message.text).catch(console.error);
       } else if (event.postback?.payload) {
         await handlePostback(pageId, psid, event.postback.payload).catch(console.error);

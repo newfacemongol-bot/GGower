@@ -473,6 +473,16 @@ async function stepMachine(a: StepArgs) {
   const token = page.accessToken;
   const t = text.trim();
 
+  if (
+    state !== 'IDLE' &&
+    state !== 'DONE' &&
+    isCancellationIntent(t.toLowerCase())
+  ) {
+    await botSay(token, psid, convId, await getBotMessage('order_cancelled'));
+    await updateState(convId, 'IDLE', {}, []);
+    return;
+  }
+
   switch (state) {
     case 'IDLE':
     case 'PRODUCT': {

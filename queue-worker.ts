@@ -124,6 +124,7 @@ async function processOne() {
   if (queued.length === 0) return;
 
   let candidate: typeof queued[number] | null = null;
+  // Primary: never pick same page as the most recently replied one and enforce cooldown.
   for (const c of queued) {
     if (c.pageId === lastRepliedPageId) continue;
     const last = lastReplyByPage.get(c.pageId) ?? 0;
@@ -131,8 +132,11 @@ async function processOne() {
     candidate = c;
     break;
   }
+  // Fallback: still enforce "not the same page as the previous reply" — never allow
+  // consecutive same-page sends.
   if (!candidate) {
     for (const c of queued) {
+      if (c.pageId === lastRepliedPageId) continue;
       const last = lastReplyByPage.get(c.pageId) ?? 0;
       if (nowMs - last < SAME_PAGE_COOLDOWN_MS) continue;
       candidate = c;

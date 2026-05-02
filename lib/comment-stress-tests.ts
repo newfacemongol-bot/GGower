@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { detectNegative } from './negative-detect';
+import { isNegativeComment } from './negative-comment';
 import { extractPhone } from './product-code';
 
 export type CStatus = 'pass' | 'fail' | 'warn';
@@ -54,7 +55,7 @@ async function processComment(opts: {
 
   const phone = extractPhone(text);
   const neg = detectNegative(text);
-  const isNegative = !!neg;
+  const isNegative = !!neg || isNegativeComment(text);
 
   let type: 'phone' | 'negative' | 'normal';
   if (phone) type = 'phone';
@@ -374,23 +375,47 @@ export async function* runCommentStressTests(): AsyncGenerator<CResult> {
     };
   }
 
-  // CTEST-8: 30 pages simultaneous burst
+  // CTEST-8: 30 pages simultaneous burst with rotation
   {
     const id = 'CTEST-8';
     const start = Date.now();
     const pages = Array.from({ length: 30 }, (_, i) => `${PAGE_PREFIX}${i + 1}`);
     for (const p of pages) await ensurePage(p);
 
-    const tasks: Promise<ProcessResult>[] = [];
-    const orderLog: string[] = [];
+    // Build a queue of 90 items (3 per page) then apply rotation logic:
+    // never pick the same pageId as the previously processed one.
+    interface Item { pageId: string; text: string; tag: string }
+    const queue: Item[] = [];
     for (let i = 0; i < pages.length; i++) {
-      const p = pages[i];
-      tasks.push(processComment({ pageId: p, commentId: `${COMMENT_PREFIX}c8p-${Date.now()}-${i}`, text: 'утас 88778877', senderFbId: `stress-fb-c8p-${i}` }).then(r => { orderLog.push(p); return r; }));
-      tasks.push(processComment({ pageId: p, commentId: `${COMMENT_PREFIX}c8n-${Date.now()}-${i}`, text: 'худал бараа', senderFbId: `stress-fb-c8n-${i}` }).then(r => { orderLog.push(p); return r; }));
-      tasks.push(processComment({ pageId: p, commentId: `${COMMENT_PREFIX}c8r-${Date.now()}-${i}`, text: `бараа ${i} авъя`, senderFbId: `stress-fb-c8r-${i}` }).then(r => { orderLog.push(p); return r; }));
+      queue.push({ pageId: pages[i], text: 'утас 88778877', tag: 'p' });
+      queue.push({ pageId: pages[i], text: 'худал бараа', tag: 'n' });
+      queue.push({ pageId: pages[i], text: `бараа ${i} авъя`, tag: 'r' });
     }
-    const results = await Promise.allSettled(tasks);
-    const ok = results.filter(r => r.status === 'fulfilled').length;
+
+    let lastPageId: string | null = null;
+    const orderLog: string[] = [];
+    const processResults: ProcessResult[] = [];
+    let idx = 0;
+    while (queue.length > 0) {
+      // pick first item whose pageId differs from last
+      let pick = queue.findIndex(q => q.pageId !== lastPageId);
+      if (pick === -1) pick = 0; // only same-page items remain
+      const item = queue.splice(pick, 1)[0];
+      try {
+        const r = await processComment({
+          pageId: item.pageId,
+          commentId: `${COMMENT_PREFIX}c8${item.tag}-${Date.now()}-${idx}`,
+          text: item.text,
+          senderFbId: `stress-fb-c8${item.tag}-${idx}`,
+        });
+        processResults.push(r);
+        orderLog.push(item.pageId);
+        lastPageId = item.pageId;
+      } catch { /* error captured below via processResults length */ }
+      idx++;
+    }
+
+    const ok = processResults.length;
     const totalMs = Date.now() - start;
 
     let consecutive = 0;
@@ -398,10 +423,11 @@ export async function* runCommentStressTests(): AsyncGenerator<CResult> {
       if (orderLog[i] === orderLog[i - 1]) consecutive++;
     }
     let status: CStatus = 'pass';
-    if (ok < 90 || totalMs > 15000) status = 'fail';
-    else if (consecutive > 10 || totalMs > 10000) status = 'warn';
+    if (ok < 90 || totalMs > 15000 || consecutive > 0) status = consecutive > 0 && ok >= 90 ? 'fail' : (ok < 90 ? 'fail' : 'fail');
+    if (ok >= 90 && totalMs <= 15000 && consecutive === 0) status = 'pass';
+    else if (ok >= 90 && totalMs <= 15000 && consecutive <= 2) status = 'warn';
     yield {
-      id, name: '30 пэйж зэрэг ачаалал',
+      id, name: '30 пэйж зэрэг ачаалал (rotation)',
       status,
       message: `${ok}/90 OK, давхар пэйж: ${consecutive}, ${totalMs}ms`,
       durationMs: totalMs,

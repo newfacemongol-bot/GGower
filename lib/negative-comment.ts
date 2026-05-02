@@ -1,10 +1,11 @@
 const NEGATIVE_PATTERNS = [
-  'худал', 'хуурамч', 'залилсан', 'залилах', 'залилж',
-  'луйвар', 'луйварчин',
+  // Cyrillic
+  'худал', 'хуурамч', 'залилсан', 'залилах', 'залилж', 'залиллаж', 'залилаж',
+  'луйвар', 'луйварчин', 'луйварлаж', 'луйварлах',
   'хог', 'хогтой', 'хог2',
-  'муухай', 'муу бараа', 'муу2',
+  'муухай', 'муу бараа', 'муу үйлчилгээ', 'муу2', 'муу юм',
   'хулхидаж', 'хулхи', 'хулхичин',
-  'хуурч байна', 'хуурч', 'хуурсан',
+  'хуурч байна', 'хуурч', 'хуурсан', 'мэхэлж', 'мэхэлсэн',
   'битгий худлаа', 'худлаа зар', 'худлаа',
   'буруу юм зарж', 'ажиллахгүй', 'эвдэрсэн',
   'скам', 'скамм',
@@ -12,12 +13,13 @@ const NEGATIVE_PATTERNS = [
   'хэрэггүй юм',
   'худал2', 'луйвар2', 'залил2',
 
+  // Latin / Mixed
   'hudal', 'xudal',
   'huuramch', 'xuuramch', 'huurch',
   'zalilsan', 'zalilan', 'zalilj', 'zalil2',
   'luivar', 'luivariin', 'luivarchin',
   'hog', 'hog2', 'hogtoi',
-  'muuhaj', 'muuhai', 'muu baraa',
+  'muuhaj', 'muuhai', 'muu baraa', 'muu',
   'hulhi', 'hulhidaj', 'hulhichin',
   'sda', 'sdaa',
   'zail', 'zail2',
@@ -25,21 +27,17 @@ const NEGATIVE_PATTERNS = [
   'golog', 'gologdol', 'gologdson',
 ];
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const NEGATIVE_REGEX = new RegExp(
+  `(^|[^a-zа-яё0-9])(?:${NEGATIVE_PATTERNS.map(escapeRegex).join('|')})([^a-zа-яё0-9]|$)`,
+  'i',
+);
+
 export function isNegativeComment(text: string): boolean {
   if (!text) return false;
   const normalized = text.toLowerCase().replace(/\s+/g, ' ').trim();
-  for (const kw of NEGATIVE_PATTERNS) {
-    const k = kw.toLowerCase();
-    if (k.includes(' ')) {
-      if (normalized.includes(k)) return true;
-    } else {
-      const re = new RegExp(`(^|[^a-zа-яё0-9])${escapeRegex(k)}([^a-zа-яё0-9]|$)`, 'i');
-      if (re.test(normalized)) return true;
-    }
-  }
-  return false;
-}
-
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return NEGATIVE_REGEX.test(normalized);
 }

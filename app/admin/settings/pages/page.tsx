@@ -24,6 +24,8 @@ interface FormState {
 
 const EMPTY_FORM: FormState = { pageId: '', pageName: '', accessToken: '', autoReplyEnabled: true };
 
+const isDemoMode = true;
+
 export default function PagesAdminPage() {
   const [items, setItems] = useState<PageItem[]>([]);
   const [erps, setErps] = useState<ErpItem[]>([]);
@@ -89,7 +91,7 @@ export default function PagesAdminPage() {
         </button>
       </div>
 
-      {expired.length > 0 && (
+      {!isDemoMode && expired.length > 0 && (
         <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
           <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div className="text-sm text-red-800">

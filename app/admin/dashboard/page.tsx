@@ -36,6 +36,8 @@ interface Stats {
   pages: { pageId: string; pageName: string; comments: number; conversations: number }[];
 }
 
+const isDemoMode = true;
+
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [tick, setTick] = useState(0);
@@ -70,7 +72,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {expiredTokens.length > 0 && (
+      {!isDemoMode && expiredTokens.length > 0 && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
           <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div className="text-sm text-red-800 flex-1">
